@@ -18,6 +18,9 @@
     <ClCompile Include="CG_OpenGL_02_Shader01.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="VarANDFunc_02_Shader01.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Fragment.glsl">
@@ -31,5 +34,10 @@
     <Text Include="Temp_Shader.txt">
       <Filter>리소스 파일</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="VarANDFunc_02_Shader01.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

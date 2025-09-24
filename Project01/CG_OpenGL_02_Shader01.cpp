@@ -1,25 +1,182 @@
-#define _CRT_SECURE_NO_WARNINGS //--- ÇÁ·Î±×·¥ ¸Ç ¾Õ¿¡ ¼±¾ğÇÒ °Í
-#include <stdlib.h>
-#include <stdio.h>
-#include <iostream>
-#include <GL/glew.h>
-#include <gl/freeglut.h>
-#include <gl/freeglut_ext.h>
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#define _CRT_SECURE_NO_WARNINGS
+#include "VarANDFunc_02_Shader01.h"
 
-//--- ¾Æ·¡ 5°³ ÇÔ¼ö´Â »ç¿ëÀÚ Á¤ÀÇ ÇÔ¼ö ÀÓ
-void make_vertexShaders();
-void make_fragmentShaders();
-GLuint make_shaderProgram();
-GLvoid drawScene();
-GLvoid Reshape(int w, int h);
-//--- ÇÊ¿äÇÑ º¯¼ö ¼±¾ğ
-GLint width, height;
-GLuint shaderProgramID;								//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ÀÌ¸§
-GLuint vertexShader;								//--- ¹öÅØ½º ¼¼ÀÌ´õ °´Ã¼
-GLuint fragmentShader;								//--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ °´Ã¼
+auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+std::default_random_engine dre(seed);
+std::uniform_real_distribution<float> urd_0_1(0.0f, 1.0f);
+std::uniform_real_distribution<float> urd_m1_1(-1.0f, 1.0f);
+
+GLuint shaderProgramID;
+GLuint vertexShader;
+GLuint fragmentShader;
+
+GLuint VAO, VBO_pos, VBO_color, VBO, EBO;
+
+// Vertex Data : position(x,y,z), color(r,g,b)
+std::vector<Vertex_glm> Vertex_glm_vec;
+// Vertex Index (Triangle)
+std::vector<unsigned int> index_vec;
+
+void main(int argc, char** argv)
+{
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_DOUBLE | 0x0000);
+	glutInitWindowPosition(100, glutGet(GLUT_WINDOW_HEIGHT) - Window_height);
+	glutInitWindowSize(Window_width, Window_height);
+	glutCreateWindow("Example1");
+
+	glewExperimental = GL_TRUE;
+	glewInit();
+
+	make_vertexShaders();
+	make_fragmentShaders();
+	shaderProgramID = make_shaderProgram();
+
+	INIT_BUFFER();
+
+	glutDisplayFunc(drawScene);
+	glutReshapeFunc(Reshape);
+	glutKeyboardFunc(Keyboard);
+	glutMouseFunc(MouseClick);
+
+	glutMainLoop();
+}
+
+GLvoid drawScene() {
+	GLfloat rColor{ 0.3f }, gColor{ 0.3f }, bColor{ 0.3f };
+	glClearColor(rColor, gColor, bColor, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glUseProgram(shaderProgramID);
+	if (!index_vec.empty()) {
+		glBindVertexArray(VAO);
+		std::cout << "Binding VAO and Drawing Elements with count: " << index_vec.size() << "\n";
+
+		// the whole object Must be drawn separately, if i make a one point, and one triangle
+		// it should be drawn separately
+		// current it does not acting like that
+		if (DrawPoint_mode) {
+			glPointSize(10.0);
+			glDrawElements(GL_POINTS, index_vec.size(), GL_UNSIGNED_INT, 0);
+		}
+		else if (DrawLine_mode) {
+			glLineWidth(5.0);
+			glDrawElements(GL_LINES, index_vec.size(), GL_UNSIGNED_INT, 0);
+		}
+		else if (DrawTriangle_mode)
+			glDrawElements(GL_TRIANGLES, index_vec.size(), GL_UNSIGNED_INT, 0);
+		else if (DrawSquare_mode)
+			// i want to draw suare with two triangles but the square is sperated other squares
+			// so i will use triangle strip to draw square with two triangles
+			glDrawElements(GL_TRIANGLES, index_vec.size(), GL_UNSIGNED_INT, 0);
+
+		//glDrawElements(GL_TRIANGLES, index_vec.size(), GL_UNSIGNED_INT, 0);
+		//glDrawElements(GL_TRIANGLES, 6 GL_UNSIGNED_INT, 0);
+		//glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+	}
+	
+	//glPointSize(10.0);
+	//glDrawArrays(GL_TRIANGLES, 0, 3);
+	//glDrawArrays(GL_QUADS, 0, 4);
+
+	glutSwapBuffers();
+}
+
+GLvoid Reshape(int w, int h) {
+	glViewport(0, 0, w, h);
+}
+
+void Keyboard(unsigned char key, int x, int y) {
+	switch (key) {
+	case 'p':
+		if (DrawLine_mode || DrawTriangle_mode || DrawSquare_mode) {
+			std::cout << "Another drawing mode is already selected. Please deselect it first.\n";
+			break;
+		}
+		DrawPoint_mode = !DrawPoint_mode;
+		
+		std::cout << "Point Drawing Mode Selected\n";
+		break;
+	case 'l':
+		if (DrawPoint_mode || DrawTriangle_mode || DrawSquare_mode) {
+			std::cout << "Another drawing mode is already selected. Please deselect it first.\n";
+			break;
+		}
+		DrawLine_mode = !DrawLine_mode;
+
+		std::cout << "Line Drawing Mode Selected\n";
+		break;
+	case 't':
+		if (DrawPoint_mode || DrawLine_mode || DrawSquare_mode) {
+			std::cout << "Another drawing mode is already selected. Please deselect it first.\n";
+			break;
+		}
+		DrawTriangle_mode = !DrawTriangle_mode;
+
+		std::cout << "Triangle Drawing Mode Selected\n";
+		break;
+	case 'r':
+		if (DrawPoint_mode || DrawTriangle_mode || DrawLine_mode) {
+			std::cout << "Another drawing mode is already selected. Please deselect it first.\n";
+			break;
+		}
+		DrawSquare_mode = !DrawSquare_mode;
+
+		std::cout << "Square Drawing Mode Selected\n";
+	case 'q':
+		exit(0);
+	}
+}
+
+void MouseClick(int button , int state, int x, int y) {
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		if (Current_Diagram_Count > 10) {
+			std::cout << "Maximum number of Diagram reached (10). Cannot add more.\n";
+			return;
+		}
+		std::pair<float, float> ogl_xy = ConvertMouseWxy2GLxy(x, y);
+		float ogl_x = ogl_xy.first;
+		float ogl_y = ogl_xy.second;
+		std::cout << "Mouse Clicked at ( " << ogl_x << ", " << ogl_y << " )\n";
+
+		if (DrawPoint_mode) {
+			CreatePointAtOrigin(ogl_x, ogl_y);
+		}
+		else if (DrawLine_mode) {
+			// create a line Coordiante first click, and Coordinate second click
+			// and make a line from two coordinates
+			// DrawType : GL_LINE_STRIP
+			CreateLineAtOrigin(ogl_x, ogl_y);
+		}
+		else if (DrawTriangle_mode) {
+			CreateTriangleAtOrigin(ogl_x, ogl_y);
+		}
+		else if (DrawSquare_mode) {
+			CreateSquareAtOrigin(ogl_x, ogl_y);
+		}
+		else {
+			std::cout << "No drawing mode selected. Please select a mode.\n";
+			return;
+		}
+
+		UPDATE_BUFFER();
+		glutPostRedisplay();
+	}
+}
+
+std::pair<float, float> ConvertMouseWxy2GLxy(int x, int y) {
+	int width = glutGet(GLUT_WINDOW_WIDTH);
+	int height = glutGet(GLUT_WINDOW_HEIGHT);
+
+	float ogl_x = (2.0f * x) / width - 1.0f;
+	float ogl_y = 1.0f - (2.0f * y) / height;
+
+	return { ogl_x, ogl_y };
+}
+
+// uniform ë³€ìˆ˜ëŠ” ë¬´ì¡°ê±´ í• ë‹¹ë°›ê¸°
+// ì •ì  ìœ„ì¹˜ ë°”ë€Œë©´ ë²„í¼ì— ë‹¤ì‹œ ë³´ë‚´ì£¼ê¸°
 
 char* filetobuf(const char* file)
 {
@@ -39,43 +196,11 @@ char* filetobuf(const char* file)
 	return buf;										// Return the buffer
 }
 
-//--- ¸ŞÀÎ ÇÔ¼ö
-void main(int argc, char** argv)					//--- À©µµ¿ì Ãâ·ÂÇÏ°í Äİ¹éÇÔ¼ö ¼³Á¤
-{
-	width = 500;
-	height = 500;
-		
-	//--- À©µµ¿ì »ı¼ºÇÏ±â
-	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-	glutInitWindowPosition(100, 100);
-	glutInitWindowSize(width, height);
-	glutCreateWindow("Example1");
-
-	//--- GLEW ÃÊ±âÈ­ÇÏ±â
-	glewExperimental = GL_TRUE;
-	glewInit();
-
-	//--- ¼¼ÀÌ´õ ÀĞ¾î¿Í¼­ ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸¸µé±â: »ç¿ëÀÚ Á¤ÀÇÇÔ¼ö È£Ãâ
-	make_vertexShaders();							//--- ¹öÅØ½º ¼¼ÀÌ´õ ¸¸µé±â
-	make_fragmentShaders();							//--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ ¸¸µé±â
-	shaderProgramID = make_shaderProgram();
-
-	//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸¸µé±â
-	glutDisplayFunc(drawScene); //--- Ãâ·Â Äİ¹é ÇÔ¼ö
-	glutReshapeFunc(Reshape);
-	glutKeyboardFunc([](unsigned char key, int x, int y) {
-		if (key == 'q') exit(0);
-		});
-
-	glutMainLoop();
-}
-
 void make_vertexShaders()
 {
 	GLchar* vertexSource;
-	//--- ¹öÅØ½º ¼¼ÀÌ´õ ÀĞ¾î ÀúÀåÇÏ°í ÄÄÆÄÀÏ ÇÏ±â
-	//--- filetobuf: »ç¿ëÀÚÁ¤ÀÇ ÇÔ¼ö·Î ÅØ½ºÆ®¸¦ ÀĞ¾î¼­ ¹®ÀÚ¿­¿¡ ÀúÀåÇÏ´Â ÇÔ¼ö
+	//--- ë²„í…ìŠ¤ ì„¸ì´ë” ì½ì–´ ì €ì¥í•˜ê³  ì»´íŒŒì¼ í•˜ê¸°
+	//--- filetobuf: ì‚¬ìš©ìì •ì˜ í•¨ìˆ˜ë¡œ í…ìŠ¤íŠ¸ë¥¼ ì½ì–´ì„œ ë¬¸ìì—´ì— ì €ì¥í•˜ëŠ” í•¨ìˆ˜
 	vertexSource = filetobuf("vertex.glsl");
 	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexSource, NULL);
@@ -83,19 +208,20 @@ void make_vertexShaders()
 	GLint result;
 	GLchar errorLog[512];
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
-	if(!result)
+	if (!result)
 	{
 		glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
-		std::cerr << "ERROR: vertex shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << std::endl;
+		std::cerr << "ERROR: vertex shader ì»´íŒŒì¼ ì‹¤íŒ¨\n" << errorLog << std::endl;
 		return;
 	}
 }
 
+
 void make_fragmentShaders()
 {
 	GLchar* fragmentSource;
-	//--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ ÀĞ¾î ÀúÀåÇÏ°í ÄÄÆÄÀÏÇÏ±â
-	fragmentSource = filetobuf("fragment.glsl");	// ÇÁ·¡±×¼¼ÀÌ´õ ÀĞ¾î¿À±â
+	//--- í”„ë˜ê·¸ë¨¼íŠ¸ ì„¸ì´ë” ì½ì–´ ì €ì¥í•˜ê³  ì»´íŒŒì¼í•˜ê¸°
+	fragmentSource = filetobuf("fragment.glsl");	// í”„ë˜ê·¸ì„¸ì´ë” ì½ì–´ì˜¤ê¸°
 	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
 	glCompileShader(fragmentShader);
@@ -105,7 +231,7 @@ void make_fragmentShaders()
 	if (!result)
 	{
 		glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
-		std::cerr << "ERROR: frag_shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << std::endl;
+		std::cerr << "ERROR: frag_shader ì»´íŒŒì¼ ì‹¤íŒ¨\n" << errorLog << std::endl;
 		return;
 	}
 }
@@ -115,47 +241,184 @@ GLuint make_shaderProgram()
 	GLint result;
 	GLchar* errorLog = NULL;
 	GLuint shaderID;
-	shaderID = glCreateProgram();					//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸¸µé±â
-	glAttachShader(shaderID, vertexShader);			//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥¿¡ ¹öÅØ½º ¼¼ÀÌ´õ ºÙÀÌ±â
-	glAttachShader(shaderID, fragmentShader);		//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥¿¡ ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ ºÙÀÌ±â
-	glLinkProgram(shaderID);						//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸µÅ©ÇÏ±â
-	glDeleteShader(vertexShader);					//--- ¼¼ÀÌ´õ °´Ã¼¸¦ ¼¼ÀÌ´õ ÇÁ·Î±×·¥¿¡ ¸µÅ©ÇßÀ½À¸·Î, ¼¼ÀÌ´õ °´Ã¼ ÀÚÃ¼´Â »èÁ¦ °¡´É
+	shaderID = glCreateProgram();					//--- ì„¸ì´ë” í”„ë¡œê·¸ë¨ ë§Œë“¤ê¸°
+	glAttachShader(shaderID, vertexShader);			//--- ì„¸ì´ë” í”„ë¡œê·¸ë¨ì— ë²„í…ìŠ¤ ì„¸ì´ë” ë¶™ì´ê¸°
+	glAttachShader(shaderID, fragmentShader);		//--- ì„¸ì´ë” í”„ë¡œê·¸ë¨ì— í”„ë˜ê·¸ë¨¼íŠ¸ ì„¸ì´ë” ë¶™ì´ê¸°
+	glLinkProgram(shaderID);						//--- ì„¸ì´ë” í”„ë¡œê·¸ë¨ ë§í¬í•˜ê¸°
+	glDeleteShader(vertexShader);					//--- ì„¸ì´ë” ê°ì²´ë¥¼ ì„¸ì´ë” í”„ë¡œê·¸ë¨ì— ë§í¬í–ˆìŒìœ¼ë¡œ, ì„¸ì´ë” ê°ì²´ ìì²´ëŠ” ì‚­ì œ ê°€ëŠ¥
 	glDeleteShader(fragmentShader);
-	glGetProgramiv(shaderID, GL_LINK_STATUS, &result); // ---¼¼ÀÌ´õ°¡ Àß ¿¬°áµÇ¾ú´ÂÁö Ã¼Å©ÇÏ±â
+	glGetProgramiv(shaderID, GL_LINK_STATUS, &result); // ---ì„¸ì´ë”ê°€ ì˜ ì—°ê²°ë˜ì—ˆëŠ”ì§€ ì²´í¬í•˜ê¸°
 	if (!result) {
 		glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
-		std::cerr << "ERROR: shader program ¿¬°á ½ÇÆĞ\n" << errorLog << std::endl;
+		std::cerr << "ERROR: shader program ì—°ê²° ì‹¤íŒ¨\n" << errorLog << std::endl;
 		return false;
 	}
-	glUseProgram(shaderID);							//--- ¸¸µé¾îÁø ¼¼ÀÌ´õ ÇÁ·Î±×·¥ »ç¿ëÇÏ±â
-	//--- ¿©·¯ °³ÀÇ ¼¼ÀÌ´õÇÁ·Î±×·¥ ¸¸µé ¼ö ÀÖ°í, ±× Áß ÇÑ°³ÀÇ ÇÁ·Î±×·¥À» »ç¿ëÇÏ·Á¸é
-	//--- glUseProgram ÇÔ¼ö¸¦ È£ÃâÇÏ¿© »ç¿ë ÇÒ Æ¯Á¤ ÇÁ·Î±×·¥À» ÁöÁ¤ÇÑ´Ù.
-	//--- »ç¿ëÇÏ±â Á÷Àü¿¡ È£ÃâÇÒ ¼ö ÀÖ´Ù.
+	glUseProgram(shaderID);							//--- ë§Œë“¤ì–´ì§„ ì„¸ì´ë” í”„ë¡œê·¸ë¨ ì‚¬ìš©í•˜ê¸°
+	//--- ì—¬ëŸ¬ ê°œì˜ ì„¸ì´ë”í”„ë¡œê·¸ë¨ ë§Œë“¤ ìˆ˜ ìˆê³ , ê·¸ ì¤‘ í•œê°œì˜ í”„ë¡œê·¸ë¨ì„ ì‚¬ìš©í•˜ë ¤ë©´
+	//--- glUseProgram í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•˜ì—¬ ì‚¬ìš© í•  íŠ¹ì • í”„ë¡œê·¸ë¨ì„ ì§€ì •í•œë‹¤.
+	//--- ì‚¬ìš©í•˜ê¸° ì§ì „ì— í˜¸ì¶œí•  ìˆ˜ ìˆë‹¤.
 	return shaderID;
 }
 
-GLvoid drawScene() //--- Äİ¹é ÇÔ¼ö: ±×¸®±â Äİ¹é ÇÔ¼ö
+void INIT_BUFFER()
 {
-	GLfloat rColor, gColor, bColor;
-	rColor = gColor = 0.0;
-	bColor = 1.0;									//--- ¹è°æ»öÀ» ÆÄ¶û»öÀ¸·Î ¼³Á¤
-	glClearColor(rColor, gColor, bColor, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	std::cout << "Initializing VAO, EBO \n";
 
-	glUseProgram(shaderProgramID);
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	//glGenBuffers(1, &VBO_pos);
+	//glGenBuffers(1, &VBO_color);
+	std::cout << "Created VAO, EBO \n";
+	/*
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_pos);
+	glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(vPositionList[0]), vPositionList, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_color);
+	glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(vColorList[0]), vColorList, GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+	*/
 
-	glPointSize(10.0);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);				//--- ·»´õ¸µÇÏ±â: 0¹ø ÀÎµ¦½º¿¡¼­ 1°³ÀÇ ¹öÅØ½º¸¦ »ç¿ëÇÏ¿© Á¡ ±×¸®±â
-	//glDrawArrays(GL_QUADS, 0, 4);					//--- ·»´õ¸µÇÏ±â: 0¹ø ÀÎµ¦½º¿¡¼­ 4°³ÀÇ ¹öÅØ½º¸¦ »ç¿ëÇÏ¿© »ç°¢Çü ±×¸®±â
+	glBindVertexArray(VAO);
 
-	glutSwapBuffers();								// È­¸é¿¡ Ãâ·ÂÇÏ±â
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, position));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, color));
+	std::cout << "Debug 1\n";
+
+	/*
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); //--- GL_ELEMENT_ARRAY_BUFFER ë²„í¼ ìœ í˜•ìœ¼ë¡œ ë°”ì¸ë”©
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(index[0]), index, GL_STATIC_DRAW);
+	std::cout << "Debug 2\n";
+	*/
+
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
+	std::cout << "Debug 2\n";
+
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	std::cout << "Debug 3\n";
 }
 
-//--- ´Ù½Ã±×¸®±â Äİ¹é ÇÔ¼ö
-GLvoid Reshape(int w, int h)						//--- Äİ¹é ÇÔ¼ö: ´Ù½Ã ±×¸®±â Äİ¹é ÇÔ¼ö
+void UPDATE_BUFFER()
 {
-	glViewport(0, 0, w, h);
+	if (Vertex_glm_vec.empty() || index_vec.empty()) return;
+	std::cout << "Updating VBO, EBO \n";
+
+	glBindVertexArray(VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, Vertex_glm_vec.size() * sizeof(Vertex_glm), Vertex_glm_vec.data(), GL_DYNAMIC_DRAW);
+	std::cout << "Rebinding VBO with size: " << Vertex_glm_vec.size() * sizeof(Vertex_glm) << " Count of Vertex : " << Vertex_glm_vec.size() << "\n";
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_vec.size() * sizeof(unsigned int), index_vec.data(), GL_DYNAMIC_DRAW);
+	std::cout << "Rebinding EBO with size: " << index_vec.size() * sizeof(unsigned int) << " Count of Index : " << index_vec.size() << "\n";
+
+	// ë²„í¼ ë°”ì¸ë”© í•´ì œ
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	std::cout << "Buffer Update Completed\n";
 }
 
-// uniform º¯¼ö´Â ¹«Á¶°Ç ÇÒ´ç¹Ş±â
-// Á¤Á¡ À§Ä¡ ¹Ù²î¸é ¹öÆÛ¿¡ ´Ù½Ã º¸³»ÁÖ±â
+void CreatePointAtOrigin(float ogl_x, float ogl_y) {
+	// now create a new origin and make a point from origin with random color
+	Vertex_glm v1;
+	float x1 = ogl_x, y1 = ogl_y, z1 = 0.0f;
+	v1.position = glm::vec3(x1, y1, z1);
+
+	float r1 = urd_0_1(dre), g1 = urd_0_1(dre), b1 = urd_0_1(dre);
+	v1.color = glm::vec3(r1, g1, b1);
+
+	// Count : 1, Index: (0) // Count : 2, Index: (1) // Count : 3, Index: (2) ...
+	int base_index = Vertex_glm_vec.size();
+	Vertex_glm_vec.push_back(v1);
+
+	index_vec.push_back(base_index + 0);
+	Current_Diagram_Count++;
+}
+
+void CreateLineAtOrigin(float ogl_x, float ogl_y) {
+	// now create a new origin and make a line from origin with random color
+	Vertex_glm v1, v2;
+	float x1 = ogl_x - Triangle_range, y1 = ogl_y + Triangle_range, z1 = 0.0f;
+	float x2 = ogl_x + Triangle_range, y2 = ogl_y - Triangle_range, z2 = 0.0f;
+	v1.position = glm::vec3(x1, y1, z1);
+	v2.position = glm::vec3(x2, y2, z2);
+	float r1 = urd_0_1(dre), g1 = urd_0_1(dre), b1 = urd_0_1(dre);
+	float r2 = urd_0_1(dre), g2 = urd_0_1(dre), b2 = urd_0_1(dre);
+	v1.color = glm::vec3(r1, g1, b1);
+	v2.color = glm::vec3(r2, g2, b2);
+	// Count : 1, Index: (0, 1) // Count : 2, Index: (2, 3) // Count : 3, Index: (4, 5) ...
+	int base_index = Vertex_glm_vec.size();
+	Vertex_glm_vec.push_back(v1); Vertex_glm_vec.push_back(v2);
+	index_vec.push_back(base_index + 0);
+	index_vec.push_back(base_index + 1);
+	Current_Diagram_Count++;
+}
+
+void CreateTriangleAtOrigin(float ogl_x, float ogl_y) {
+	// now create a new origin and make a triangle from origin with random color
+	Vertex_glm v1, v2, v3;
+	float x1 = ogl_x, y1 = ogl_y + Triangle_range, z1 = 0.0f;
+	float x2 = ogl_x - Triangle_range, y2 = ogl_y - Triangle_range, z2 = 0.0f;
+	float x3 = ogl_x + Triangle_range, y3 = ogl_y - Triangle_range, z3 = 0.0f;
+	v1.position = glm::vec3(x1, y1, z1);
+	v2.position = glm::vec3(x2, y2, z2);
+	v3.position = glm::vec3(x3, y3, z3);
+
+	float r1 = urd_0_1(dre), g1 = urd_0_1(dre), b1 = urd_0_1(dre);
+	float r2 = urd_0_1(dre), g2 = urd_0_1(dre), b2 = urd_0_1(dre);
+	float r3 = urd_0_1(dre), g3 = urd_0_1(dre), b3 = urd_0_1(dre);
+	v1.color = glm::vec3(r1, g1, b1);
+	v2.color = glm::vec3(r2, g2, b2);
+	v3.color = glm::vec3(r3, g3, b3);
+
+	// Count : 1, Index: (0, 1, 2) // Count : 2, Index: (3, 4, 5) // Count : 3, Index: (6, 7, 8) ...
+	int base_index = Vertex_glm_vec.size();
+	Vertex_glm_vec.push_back(v1); Vertex_glm_vec.push_back(v2); Vertex_glm_vec.push_back(v3);
+
+	index_vec.push_back(base_index + 0);
+	index_vec.push_back(base_index + 1);
+	index_vec.push_back(base_index + 2);
+	Current_Diagram_Count++;
+}
+
+void CreateSquareAtOrigin(float ogl_x, float ogl_y) {
+	// now create a new origin and make a square from origin with random color
+	Vertex_glm v1, v2, v3, v4;
+	float x1 = ogl_x + Triangle_range, y1 = ogl_y + Triangle_range, z1 = 0.0f;
+	float x2 = ogl_x + Triangle_range, y2 = ogl_y - Triangle_range, z2 = 0.0f;
+	float x3 = ogl_x - Triangle_range, y3 = ogl_y - Triangle_range, z3 = 0.0f;
+	float x4 = ogl_x - Triangle_range, y4 = ogl_y + Triangle_range, z4 = 0.0f;
+	v1.position = glm::vec3(x1, y1, z1);
+	v2.position = glm::vec3(x2, y2, z2);
+	v3.position = glm::vec3(x3, y3, z3);
+	v4.position = glm::vec3(x4, y4, z4);
+
+	float r1 = urd_0_1(dre), g1 = urd_0_1(dre), b1 = urd_0_1(dre);
+	float r2 = urd_0_1(dre), g2 = urd_0_1(dre), b2 = urd_0_1(dre);
+	float r3 = urd_0_1(dre), g3 = urd_0_1(dre), b3 = urd_0_1(dre);
+	float r4 = urd_0_1(dre), g4 = urd_0_1(dre), b4 = urd_0_1(dre);
+	v1.color = glm::vec3(r1, g1, b1);
+	v2.color = glm::vec3(r2, g2, b2);
+	v3.color = glm::vec3(r3, g3, b3);
+	v4.color = glm::vec3(r4, g4, b4);
+
+	// Count : 1, Index: (0, 1, 2) // Count : 2, Index: (3, 4, 5) // Count : 3, Index: (6, 7, 8) ...
+	int base_index = Vertex_glm_vec.size();
+	Vertex_glm_vec.push_back(v1); Vertex_glm_vec.push_back(v2); Vertex_glm_vec.push_back(v3); Vertex_glm_vec.push_back(v4);
+	// two triangles
+	index_vec.push_back(base_index + 0);
+	index_vec.push_back(base_index + 1);
+	index_vec.push_back(base_index + 3);
+	index_vec.push_back(base_index + 1);
+	index_vec.push_back(base_index + 2);
+	index_vec.push_back(base_index + 3);
+	Current_Diagram_Count++;
+}
