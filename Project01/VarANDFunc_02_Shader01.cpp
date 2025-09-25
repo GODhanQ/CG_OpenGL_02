@@ -34,3 +34,83 @@ unsigned int index[] = {
 	//0, 1, 2, 3 // 사각형
 };
 
+void DrawBatchManager::prepareDrawCalls(const std::vector<Shape>& all_models) {
+	points_batch = {};
+    lines_batch = {};
+    triangles_batch = {};
+	squares_batch = {};
+
+    for (const auto& model : all_models) {
+        DrawCallParameters* selected_batch = nullptr;
+
+        if (model.draw_mode == GL_POINTS) {
+            selected_batch = &points_batch;
+		}
+        else if (model.draw_mode == GL_LINES) {
+            selected_batch = &lines_batch;
+        }
+        else if (model.draw_mode == GL_TRIANGLES) {
+            selected_batch = &triangles_batch;
+        }
+        else if (model.draw_mode == GL_QUADS) {
+            selected_batch = &squares_batch;
+		}
+        else {
+			std::cout << "Not supported draw mode encountered. Skipping model.\n";
+            continue;
+        }
+
+        selected_batch->counts.push_back(model.index_count);
+        selected_batch->indices_offsets.push_back((const void*)(intptr_t)model.index_offset);
+        selected_batch->basevertices.push_back(model.base_vertex);
+    }
+
+    // 드로우 횟수 업데이트
+	points_batch.draw_count = points_batch.counts.size();
+    lines_batch.draw_count = lines_batch.counts.size();
+    triangles_batch.draw_count = triangles_batch.counts.size();
+	squares_batch.draw_count = squares_batch.counts.size();
+}
+
+void DrawBatchManager::drawAll() {
+    if (points_batch.draw_count > 0) {
+        glMultiDrawElementsBaseVertex(
+            GL_POINTS,
+            points_batch.counts.data(),
+            GL_UNSIGNED_INT,
+            const_cast<void**>(reinterpret_cast<const void* const*>(points_batch.indices_offsets.data())),
+            points_batch.draw_count,
+            points_batch.basevertices.data()
+        );
+    }
+    if (lines_batch.draw_count > 0) {
+        glMultiDrawElementsBaseVertex(
+            GL_LINES,
+            lines_batch.counts.data(),
+            GL_UNSIGNED_INT,
+            const_cast<void**>(reinterpret_cast<const void* const*>(lines_batch.indices_offsets.data())),
+            lines_batch.draw_count,
+            lines_batch.basevertices.data()
+        );
+    }
+    if (triangles_batch.draw_count > 0) {
+        glMultiDrawElementsBaseVertex(
+            GL_TRIANGLES,
+            triangles_batch.counts.data(),
+            GL_UNSIGNED_INT,
+            const_cast<void**>(reinterpret_cast<const void* const*>(triangles_batch.indices_offsets.data())),
+            triangles_batch.draw_count,
+            triangles_batch.basevertices.data()
+        );
+    }
+    if (squares_batch.draw_count > 0) {
+        glMultiDrawElementsBaseVertex(
+            GL_QUADS,
+            squares_batch.counts.data(),
+            GL_UNSIGNED_INT,
+            const_cast<void**>(reinterpret_cast<const void* const*>(squares_batch.indices_offsets.data())),
+            squares_batch.draw_count,
+            squares_batch.basevertices.data()
+        );
+    }
+}

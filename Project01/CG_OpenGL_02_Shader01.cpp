@@ -16,6 +16,10 @@ GLuint VAO, VBO_pos, VBO_color, VBO, EBO;
 std::vector<Vertex_glm> Vertex_glm_vec;
 // Vertex Index (Triangle)
 std::vector<unsigned int> index_vec;
+// Shape models : Shape
+std::vector<Shape> Model_vec;
+
+DrawBatchManager drawBatchManager;
 
 void main(int argc, char** argv)
 {
@@ -55,12 +59,34 @@ GLvoid drawScene() {
 		// the whole object Must be drawn separately, if i make a one point, and one triangle
 		// it should be drawn separately
 		// current it does not acting like that
+
+		glPointSize(10.0);
+		glLineWidth(5.0);
+
+		drawBatchManager.prepareDrawCalls(Model_vec);
+		drawBatchManager.drawAll();
+		std::cout << "Current Object Count: " << Model_vec.size() << "\n";
+		/*for (auto& shape : Model_vec) {
+			std::cout << "Draw Mode: " << shape.draw_mode << ", Index Count: " << shape.index_count
+				<< ", Base Vertex: " << shape.base_vertex << ", Index Offset (bytes): " << shape.index_offset << "\n";
+			std::cout << "\nVertex Position and Color:\n";
+			for (int i = 0; i < shape.index_count; i++) {
+				int vertex_index = index_vec[shape.base_vertex + i];
+				if (vertex_index < Vertex_glm_vec.size()) {
+					auto& vertex = Vertex_glm_vec[vertex_index];
+					std::cout << "  Vertex " << vertex_index << ": Position(" 
+						<< vertex.position.x << ", " << vertex.position.y << ", " << vertex.position.z 
+						<< "), Color(" << vertex.color.r << ", " << vertex.color.g << ", " << vertex.color.b << ")\n";
+				}
+			}
+			std::cout << "-----------------------------------\n";
+		}*/
+
+		/*
 		if (DrawPoint_mode) {
-			glPointSize(10.0);
 			glDrawElements(GL_POINTS, index_vec.size(), GL_UNSIGNED_INT, 0);
 		}
 		else if (DrawLine_mode) {
-			glLineWidth(5.0);
 			glDrawElements(GL_LINES, index_vec.size(), GL_UNSIGNED_INT, 0);
 		}
 		else if (DrawTriangle_mode)
@@ -69,11 +95,12 @@ GLvoid drawScene() {
 			// i want to draw suare with two triangles but the square is sperated other squares
 			// so i will use triangle strip to draw square with two triangles
 			glDrawElements(GL_TRIANGLES, index_vec.size(), GL_UNSIGNED_INT, 0);
+		*/
 
 		//glDrawElements(GL_TRIANGLES, index_vec.size(), GL_UNSIGNED_INT, 0);
 		//glDrawElements(GL_TRIANGLES, 6 GL_UNSIGNED_INT, 0);
 		//glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
+		//glBindVertexArray(0);
 	}
 	
 	//glPointSize(10.0);
@@ -96,7 +123,7 @@ void Keyboard(unsigned char key, int x, int y) {
 		}
 		DrawPoint_mode = !DrawPoint_mode;
 		
-		std::cout << "Point Drawing Mode Selected\n";
+		std::cout << "Point Drawing Mode :" << (DrawPoint_mode ? " On" : " Off") << '\n';
 		break;
 	case 'l':
 		if (DrawPoint_mode || DrawTriangle_mode || DrawSquare_mode) {
@@ -105,7 +132,7 @@ void Keyboard(unsigned char key, int x, int y) {
 		}
 		DrawLine_mode = !DrawLine_mode;
 
-		std::cout << "Line Drawing Mode Selected\n";
+		std::cout << "Line Drawing Mode :" << (DrawLine_mode ? " On" : " Off") << '\n';
 		break;
 	case 't':
 		if (DrawPoint_mode || DrawLine_mode || DrawSquare_mode) {
@@ -114,16 +141,17 @@ void Keyboard(unsigned char key, int x, int y) {
 		}
 		DrawTriangle_mode = !DrawTriangle_mode;
 
-		std::cout << "Triangle Drawing Mode Selected\n";
+		std::cout << "Triangle Drawing Mode :" << (DrawTriangle_mode ? " On" : " Off") << '\n';
 		break;
-	case 'r':
+	case 's':
 		if (DrawPoint_mode || DrawTriangle_mode || DrawLine_mode) {
 			std::cout << "Another drawing mode is already selected. Please deselect it first.\n";
 			break;
 		}
 		DrawSquare_mode = !DrawSquare_mode;
 
-		std::cout << "Square Drawing Mode Selected\n";
+		std::cout << "Square Drawing Mode :" << (DrawSquare_mode ? " On" : " Off") << '\n';
+		break;
 	case 'q':
 		exit(0);
 	}
@@ -131,7 +159,7 @@ void Keyboard(unsigned char key, int x, int y) {
 
 void MouseClick(int button , int state, int x, int y) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-		if (Current_Diagram_Count > 10) {
+		if (Current_Diagram_Count >= 10) {
 			std::cout << "Maximum number of Diagram reached (10). Cannot add more.\n";
 			return;
 		}
@@ -268,7 +296,7 @@ void INIT_BUFFER()
 	glGenBuffers(1, &VBO);
 	//glGenBuffers(1, &VBO_pos);
 	//glGenBuffers(1, &VBO_color);
-	std::cout << "Created VAO, EBO \n";
+
 	/*
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO_pos);
@@ -285,23 +313,13 @@ void INIT_BUFFER()
 	glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, position));
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, color));
-	std::cout << "Debug 1\n";
-
-	/*
-	glGenBuffers(1, &EBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); //--- GL_ELEMENT_ARRAY_BUFFER 버퍼 유형으로 바인딩
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(index[0]), index, GL_STATIC_DRAW);
-	std::cout << "Debug 2\n";
-	*/
-
+	
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
-	std::cout << "Debug 2\n";
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
-	std::cout << "Debug 3\n";
 }
 
 void UPDATE_BUFFER()
@@ -329,6 +347,7 @@ void UPDATE_BUFFER()
 void CreatePointAtOrigin(float ogl_x, float ogl_y) {
 	// now create a new origin and make a point from origin with random color
 	Vertex_glm v1;
+	Shape shape;
 	float x1 = ogl_x, y1 = ogl_y, z1 = 0.0f;
 	v1.position = glm::vec3(x1, y1, z1);
 
@@ -336,35 +355,56 @@ void CreatePointAtOrigin(float ogl_x, float ogl_y) {
 	v1.color = glm::vec3(r1, g1, b1);
 
 	// Count : 1, Index: (0) // Count : 2, Index: (1) // Count : 3, Index: (2) ...
-	int base_index = Vertex_glm_vec.size();
+	int base_vertex = Vertex_glm_vec.size();
+	size_t index_offset = index_vec.size();
 	Vertex_glm_vec.push_back(v1);
 
-	index_vec.push_back(base_index + 0);
+	shape.draw_mode = GL_POINTS; shape.index_count = 1; shape.base_vertex = base_vertex;
+	shape.index_offset = index_offset * sizeof(unsigned int);
+
 	Current_Diagram_Count++;
+	index_vec.push_back(0);
+	Model_vec.push_back(shape);
+
+	std::cout << "Created Point at (" << x1 << ", " << y1 << ")\n";
 }
 
 void CreateLineAtOrigin(float ogl_x, float ogl_y) {
 	// now create a new origin and make a line from origin with random color
 	Vertex_glm v1, v2;
+	Shape shape;
+
 	float x1 = ogl_x - Triangle_range, y1 = ogl_y + Triangle_range, z1 = 0.0f;
 	float x2 = ogl_x + Triangle_range, y2 = ogl_y - Triangle_range, z2 = 0.0f;
 	v1.position = glm::vec3(x1, y1, z1);
 	v2.position = glm::vec3(x2, y2, z2);
+
 	float r1 = urd_0_1(dre), g1 = urd_0_1(dre), b1 = urd_0_1(dre);
 	float r2 = urd_0_1(dre), g2 = urd_0_1(dre), b2 = urd_0_1(dre);
 	v1.color = glm::vec3(r1, g1, b1);
 	v2.color = glm::vec3(r2, g2, b2);
+
 	// Count : 1, Index: (0, 1) // Count : 2, Index: (2, 3) // Count : 3, Index: (4, 5) ...
-	int base_index = Vertex_glm_vec.size();
+	int base_vertex = Vertex_glm_vec.size();
+	size_t index_offset = index_vec.size();
 	Vertex_glm_vec.push_back(v1); Vertex_glm_vec.push_back(v2);
-	index_vec.push_back(base_index + 0);
-	index_vec.push_back(base_index + 1);
+
+	shape.draw_mode = GL_LINES; shape.index_count = 2; shape.base_vertex = base_vertex;
+	shape.index_offset = index_offset * sizeof(unsigned int);
+
 	Current_Diagram_Count++;
+	index_vec.push_back(0);
+	index_vec.push_back(1);
+	Model_vec.push_back(shape);
+
+	std::cout << "Created Line from (" << x1 << ", " << y1 << ") to (" << x2 << ", " << y2 << ")\n";
 }
 
 void CreateTriangleAtOrigin(float ogl_x, float ogl_y) {
 	// now create a new origin and make a triangle from origin with random color
 	Vertex_glm v1, v2, v3;
+	Shape shape;
+
 	float x1 = ogl_x, y1 = ogl_y + Triangle_range, z1 = 0.0f;
 	float x2 = ogl_x - Triangle_range, y2 = ogl_y - Triangle_range, z2 = 0.0f;
 	float x3 = ogl_x + Triangle_range, y3 = ogl_y - Triangle_range, z3 = 0.0f;
@@ -380,18 +420,27 @@ void CreateTriangleAtOrigin(float ogl_x, float ogl_y) {
 	v3.color = glm::vec3(r3, g3, b3);
 
 	// Count : 1, Index: (0, 1, 2) // Count : 2, Index: (3, 4, 5) // Count : 3, Index: (6, 7, 8) ...
-	int base_index = Vertex_glm_vec.size();
+	int base_vertex = Vertex_glm_vec.size();
+	size_t index_offset = index_vec.size();
 	Vertex_glm_vec.push_back(v1); Vertex_glm_vec.push_back(v2); Vertex_glm_vec.push_back(v3);
 
-	index_vec.push_back(base_index + 0);
-	index_vec.push_back(base_index + 1);
-	index_vec.push_back(base_index + 2);
+	shape.draw_mode = GL_TRIANGLES; shape.index_count = 3; shape.base_vertex = base_vertex;
+	shape.index_offset = index_offset * sizeof(unsigned int);
+
 	Current_Diagram_Count++;
+	index_vec.push_back(0);
+	index_vec.push_back(1);
+	index_vec.push_back(2);
+	Model_vec.push_back(shape);
+
+	std::cout << "Created Triangle at (" << x1 << ", " << y1 << "), (" << x2 << ", " << y2 << "), (" << x3 << ", " << y3 << ")\n";
 }
 
 void CreateSquareAtOrigin(float ogl_x, float ogl_y) {
 	// now create a new origin and make a square from origin with random color
 	Vertex_glm v1, v2, v3, v4;
+	Shape shape;
+
 	float x1 = ogl_x + Triangle_range, y1 = ogl_y + Triangle_range, z1 = 0.0f;
 	float x2 = ogl_x + Triangle_range, y2 = ogl_y - Triangle_range, z2 = 0.0f;
 	float x3 = ogl_x - Triangle_range, y3 = ogl_y - Triangle_range, z3 = 0.0f;
@@ -411,14 +460,22 @@ void CreateSquareAtOrigin(float ogl_x, float ogl_y) {
 	v4.color = glm::vec3(r4, g4, b4);
 
 	// Count : 1, Index: (0, 1, 2) // Count : 2, Index: (3, 4, 5) // Count : 3, Index: (6, 7, 8) ...
-	int base_index = Vertex_glm_vec.size();
+	int base_vertex = Vertex_glm_vec.size();
+	size_t index_offset = index_vec.size();
 	Vertex_glm_vec.push_back(v1); Vertex_glm_vec.push_back(v2); Vertex_glm_vec.push_back(v3); Vertex_glm_vec.push_back(v4);
+
 	// two triangles
-	index_vec.push_back(base_index + 0);
-	index_vec.push_back(base_index + 1);
-	index_vec.push_back(base_index + 3);
-	index_vec.push_back(base_index + 1);
-	index_vec.push_back(base_index + 2);
-	index_vec.push_back(base_index + 3);
+	shape.draw_mode = GL_TRIANGLES; shape.index_count = 6; shape.base_vertex = base_vertex;
+	shape.index_offset = index_offset * sizeof(unsigned int);
+
 	Current_Diagram_Count++;
+	index_vec.push_back(0);
+	index_vec.push_back(1);
+	index_vec.push_back(3);
+	index_vec.push_back(1);
+	index_vec.push_back(2);
+	index_vec.push_back(3);
+	Model_vec.push_back(shape);
+
+	std::cout << "Created Square at (" << x1 << ", " << y1 << "), (" << x2 << ", " << y2 << "), (" << x3 << ", " << y3 << "), (" << x4 << ", " << y4 << ")\n";
 }
