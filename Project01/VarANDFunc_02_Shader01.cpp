@@ -46,7 +46,7 @@ void DrawBatchManager::prepareDrawCalls(const std::vector<Shape>& all_models) {
         if (model.draw_mode == GL_POINTS) {
             selected_batch = &points_batch;
 		}
-        else if (model.draw_mode == GL_LINES) {
+        else if (model.draw_mode == GL_LINE_STRIP) {
             selected_batch = &lines_batch;
         }
         else if (model.draw_mode == GL_TRIANGLES) {
@@ -85,7 +85,7 @@ void DrawBatchManager::drawAll() {
     }
     if (lines_batch.draw_count > 0) {
         glMultiDrawElementsBaseVertex(
-            GL_LINES,
+            GL_LINE_STRIP,
             lines_batch.counts.data(),
             GL_UNSIGNED_INT,
             const_cast<void**>(reinterpret_cast<const void* const*>(lines_batch.indices_offsets.data())),

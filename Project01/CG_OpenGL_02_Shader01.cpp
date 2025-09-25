@@ -20,6 +20,7 @@ std::vector<unsigned int> index_vec;
 std::vector<Shape> Model_vec;
 
 DrawBatchManager drawBatchManager;
+int active_line_strip_model_index = -1;
 
 void main(int argc, char** argv)
 {
@@ -115,9 +116,18 @@ GLvoid Reshape(int w, int h) {
 }
 
 void Keyboard(unsigned char key, int x, int y) {
+	// 모드 변경 시, 진행 중이던 라인 스트립 그리기를 종료
+	if (key != 'l') { // 'l' 키를 누른 게 아니라면 라인 그리기 상태 초기화
+		active_line_strip_model_index = -1;
+	}
+
 	switch (key) {
 	case 'p':
-		if (DrawLine_mode || DrawTriangle_mode || DrawSquare_mode) {
+		if (DrawLine_mode) { // 라인 모드가 켜져 있으면 다른 모드 선택 불가
+			std::cout << "Please deactivate Line Drawing Mode ('l') first.\n";
+			break;
+		}
+		if (DrawTriangle_mode || DrawSquare_mode) {
 			std::cout << "Another drawing mode is already selected. Please deselect it first.\n";
 			break;
 		}
@@ -131,11 +141,19 @@ void Keyboard(unsigned char key, int x, int y) {
 			break;
 		}
 		DrawLine_mode = !DrawLine_mode;
+		// 라인 모드가 꺼지면 그리던 선을 확정
+		if (!DrawLine_mode) {
+			active_line_strip_model_index = -1;
+		}
 
 		std::cout << "Line Drawing Mode :" << (DrawLine_mode ? " On" : " Off") << '\n';
 		break;
 	case 't':
-		if (DrawPoint_mode || DrawLine_mode || DrawSquare_mode) {
+		if (DrawLine_mode) { // 라인 모드가 켜져 있으면 다른 모드 선택 불가
+			std::cout << "Please deactivate Line Drawing Mode ('l') first.\n";
+			break;
+		}
+		if (DrawPoint_mode || DrawSquare_mode) {
 			std::cout << "Another drawing mode is already selected. Please deselect it first.\n";
 			break;
 		}
@@ -144,7 +162,11 @@ void Keyboard(unsigned char key, int x, int y) {
 		std::cout << "Triangle Drawing Mode :" << (DrawTriangle_mode ? " On" : " Off") << '\n';
 		break;
 	case 's':
-		if (DrawPoint_mode || DrawTriangle_mode || DrawLine_mode) {
+		if (DrawLine_mode) { // 라인 모드가 켜져 있으면 다른 모드 선택 불가
+			std::cout << "Please deactivate Line Drawing Mode ('l') first.\n";
+			break;
+		}
+		if (DrawPoint_mode || DrawTriangle_mode) {
 			std::cout << "Another drawing mode is already selected. Please deselect it first.\n";
 			break;
 		}
@@ -159,7 +181,7 @@ void Keyboard(unsigned char key, int x, int y) {
 
 void MouseClick(int button , int state, int x, int y) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-		if (Current_Diagram_Count >= 10) {
+		if (Current_Diagram_Count >= 10 && active_line_strip_model_index == -1) { // 새 도형을 만들 때만 개수 체크
 			std::cout << "Maximum number of Diagram reached (10). Cannot add more.\n";
 			return;
 		}
@@ -169,18 +191,18 @@ void MouseClick(int button , int state, int x, int y) {
 		std::cout << "Mouse Clicked at ( " << ogl_x << ", " << ogl_y << " )\n";
 
 		if (DrawPoint_mode) {
+			active_line_strip_model_index = -1; // 다른 모드를 클릭하면 라인 그리기 종료
 			CreatePointAtOrigin(ogl_x, ogl_y);
 		}
 		else if (DrawLine_mode) {
-			// create a line Coordiante first click, and Coordinate second click
-			// and make a line from two coordinates
-			// DrawType : GL_LINE_STRIP
-			CreateLineAtOrigin(ogl_x, ogl_y);
+			AddVertexToLineStrip(ogl_x, ogl_y);
 		}
 		else if (DrawTriangle_mode) {
+			active_line_strip_model_index = -1; // 다른 모드를 클릭하면 라인 그리기 종료
 			CreateTriangleAtOrigin(ogl_x, ogl_y);
 		}
 		else if (DrawSquare_mode) {
+			active_line_strip_model_index = -1; // 다른 모드를 클릭하면 라인 그리기 종료
 			CreateSquareAtOrigin(ogl_x, ogl_y);
 		}
 		else {
@@ -369,37 +391,46 @@ void CreatePointAtOrigin(float ogl_x, float ogl_y) {
 	std::cout << "Created Point at (" << x1 << ", " << y1 << ")\n";
 }
 
-void CreateLineAtOrigin(float ogl_x, float ogl_y) {
-	// now create a new origin and make a line from origin with random color
-	Vertex_glm v1, v2;
-	Shape shape;
 
-	float x1 = ogl_x - Triangle_range, y1 = ogl_y + Triangle_range, z1 = 0.0f;
-	float x2 = ogl_x + Triangle_range, y2 = ogl_y - Triangle_range, z2 = 0.0f;
-	v1.position = glm::vec3(x1, y1, z1);
-	v2.position = glm::vec3(x2, y2, z2);
+void AddVertexToLineStrip(float ogl_x, float ogl_y) {
+	// 새 정점 생성
+	Vertex_glm v;
+	v.position = glm::vec3(ogl_x, ogl_y, 0.0f);
+	v.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 
-	float r1 = urd_0_1(dre), g1 = urd_0_1(dre), b1 = urd_0_1(dre);
-	float r2 = urd_0_1(dre), g2 = urd_0_1(dre), b2 = urd_0_1(dre);
-	v1.color = glm::vec3(r1, g1, b1);
-	v2.color = glm::vec3(r2, g2, b2);
+	if (active_line_strip_model_index == -1) {
+		// --- 새로운 라인 스트립 시작 ---
+		Shape shape;
+		shape.draw_mode = GL_LINE_STRIP;
+		shape.index_count = 1; // 시작은 정점 1개
+		shape.base_vertex = Vertex_glm_vec.size();
+		shape.index_offset = index_vec.size() * sizeof(unsigned int);
 
-	// Count : 1, Index: (0, 1) // Count : 2, Index: (2, 3) // Count : 3, Index: (4, 5) ...
-	int base_vertex = Vertex_glm_vec.size();
-	size_t index_offset = index_vec.size();
-	Vertex_glm_vec.push_back(v1); Vertex_glm_vec.push_back(v2);
+		Vertex_glm_vec.push_back(v);
+		index_vec.push_back(0); // 로컬 인덱스 0
 
-	shape.draw_mode = GL_LINES; shape.index_count = 2; shape.base_vertex = base_vertex;
-	shape.index_offset = index_offset * sizeof(unsigned int);
+		Model_vec.push_back(shape);
+		active_line_strip_model_index = Model_vec.size() - 1; // 새로 만든 Shape의 인덱스 저장
+		Current_Diagram_Count++;
+		std::cout << "Started a new Line Strip.\n";
+	}
+	else {
+		// --- 기존 라인 스트립에 정점 추가 ---
+		Shape& shape = Model_vec[active_line_strip_model_index];
 
-	Current_Diagram_Count++;
-	index_vec.push_back(0);
-	index_vec.push_back(1);
-	Model_vec.push_back(shape);
+		// 새 정점을 전체 정점 벡터의 맨 뒤에 추가
+		Vertex_glm_vec.push_back(v);
+		
+		// 새 인덱스를 전체 인덱스 벡터의 맨 뒤에 추가
+		// 로컬 인덱스는 현재 shape이 가진 인덱스 개수와 동일
+		index_vec.push_back(shape.index_count); 
+		
+		// 이 Shape을 그릴 때 사용할 인덱스 개수 1 증가
+		shape.index_count++; 
 
-	std::cout << "Created Line from (" << x1 << ", " << y1 << ") to (" << x2 << ", " << y2 << ")\n";
+		std::cout << "Added a vertex to the current Line Strip. Total vertices: " << shape.index_count << "\n";
+	}
 }
-
 void CreateTriangleAtOrigin(float ogl_x, float ogl_y) {
 	// now create a new origin and make a triangle from origin with random color
 	Vertex_glm v1, v2, v3;

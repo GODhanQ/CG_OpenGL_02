@@ -57,6 +57,7 @@ extern float Triangle_range;
 
 extern bool DrawPoint_mode, DrawLine_mode, DrawTriangle_mode, DrawSquare_mode;
 extern int Current_Diagram_Count, Selected_Diagram;
+extern int active_line_strip_model_index; // 현재 그리고 있는 라인 스트립의 인덱스
 
 char* filetobuf(const char* file);
 void make_vertexShaders();
@@ -70,6 +71,6 @@ void INIT_BUFFER();
 void UPDATE_BUFFER();
 std::pair<float, float> ConvertMouseWxy2GLxy(int x, int y);
 void CreatePointAtOrigin(float ogl_x, float ogl_y);
-void CreateLineAtOrigin(float ogl_x, float ogl_y);
+void AddVertexToLineStrip(float ogl_x, float ogl_y); // 함수 이름 변경
 void CreateTriangleAtOrigin(float ogl_x, float ogl_y);
 void CreateSquareAtOrigin(float ogl_x, float ogl_y);
