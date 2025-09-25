@@ -139,6 +139,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Fragment.glsl" />
+    <None Include="picking_fragment.glsl" />
     <None Include="Vertex.glsl" />
   </ItemGroup>
   <ItemGroup>

@@ -59,13 +59,26 @@ extern bool DrawPoint_mode, DrawLine_mode, DrawTriangle_mode, DrawSquare_mode;
 extern int Current_Diagram_Count, Selected_Diagram;
 extern int active_line_strip_model_index; // 현재 그리고 있는 라인 스트립의 인덱스
 
+DrawBatchManager drawBatchManager;
+extern int active_line_strip_model_index;
+
+extern bool is_picking_mode; // 객체 선택 모드 활성화 상태
+extern int selected_model_index; // 선택된 객체의 인덱스
+
+extern glm::vec3 movement_vec;
+extern float movement_speed;
+
 char* filetobuf(const char* file);
 void make_vertexShaders();
 void make_fragmentShaders();
 GLuint make_shaderProgram();
+int PickObject(int x, int y);
+GLuint make_shaderProgram();
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 void Keyboard(unsigned char key, int x, int y);
+void SpecialKeyboard(int key, int x, int y);
+void SpecialKeyboardUp(int key, int x, int y);
 void MouseClick(int button, int state, int x, int y);
 void INIT_BUFFER();
 void UPDATE_BUFFER();

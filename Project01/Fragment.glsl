@@ -1,11 +1,21 @@
 #version 330 core
-//--- out_Color: 버텍스 세이더에서 입력받는 색상 값
-//--- FragColor: 출력할 색상의 값으로 프레임 버퍼로 전달 됨.
+in vec3 out_Color;
+out vec4 FragColor;
 
-in vec3 out_Color; //--- 버텍스 세이더에게서 전달 받음
-out vec4 FragColor; //--- 색상 출력
+// 모드 제어를 위한 uniform 변수들
+uniform bool u_IsPicking = false;       // Picking 모드 활성화 여부
+uniform vec3 u_PickingColor;            // Picking 시 사용할 ID 색상
 
-void main(void)
+uniform bool u_UseOverrideColor = false; // 색상 덮어쓰기 활성화 여부
+uniform vec3 u_OverrideColor;           // 덮어쓸 색상 (예: 선택 하이라이트)
+
+void main()
 {
-	FragColor = vec4 (out_Color, 1.0);
+    if (u_IsPicking) {
+        FragColor = vec4(u_PickingColor, 1.0);
+    } else if (u_UseOverrideColor) {
+        FragColor = vec4(u_OverrideColor, 1.0);
+    } else {
+        FragColor = vec4(out_Color, 1.0);
+    }
 }

@@ -29,6 +29,9 @@
     <None Include="Vertex.glsl">
       <Filter>리소스 파일</Filter>
     </None>
+    <None Include="picking_fragment.glsl">
+      <Filter>리소스 파일</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Temp_Shader.txt">

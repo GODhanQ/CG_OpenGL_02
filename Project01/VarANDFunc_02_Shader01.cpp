@@ -10,6 +10,14 @@ float Triangle_range{ 0.05f };
 bool DrawPoint_mode{ false }, DrawLine_mode{ false }, DrawTriangle_mode{ false }, DrawSquare_mode{ false };
 int Current_Diagram_Count{}, Selected_Diagram{ -1 };
 
+int active_line_strip_model_index = -1;
+
+bool is_picking_mode = false; // 객체 선택 모드 활성화 상태
+int selected_model_index = -1; // 선택된 객체의 인덱스
+
+glm::vec3 movement_vec{ 0, 0, 0 };
+float movement_speed{ 0.02f };
+
 struct Vertex {
 	std::tuple<float, float, float> position;
 	std::tuple<float, float, float> color;
