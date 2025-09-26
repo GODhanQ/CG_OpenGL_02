@@ -1,0 +1,5 @@
+#ifndef VARANDFUNC_02_SHADER02_H
+#endif VARANDFUNC_02_SHADER02_H
+
+#include "VarANDFunc_02_Shader02.h"
+

@@ -76,7 +76,6 @@ void make_vertexShaders();
 void make_fragmentShaders();
 GLuint make_shaderProgram();
 int PickObject(int x, int y);
-GLuint make_shaderProgram();
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 void Keyboard(unsigned char key, int x, int y);
