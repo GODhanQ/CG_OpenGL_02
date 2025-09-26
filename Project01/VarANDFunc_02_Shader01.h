@@ -12,6 +12,8 @@
 #include <tuple>
 #include <random>
 #include <chrono>
+#define NOMINMAX
+#include <windows.h>
 
 struct Shape {
 	GLenum draw_mode;                               // e.g., GL_TRIANGLES, GL_LINES, etc.
@@ -59,14 +61,15 @@ extern bool DrawPoint_mode, DrawLine_mode, DrawTriangle_mode, DrawSquare_mode;
 extern int Current_Diagram_Count, Selected_Diagram;
 extern int active_line_strip_model_index; // 현재 그리고 있는 라인 스트립의 인덱스
 
-DrawBatchManager drawBatchManager;
 extern int active_line_strip_model_index;
 
 extern bool is_picking_mode; // 객체 선택 모드 활성화 상태
 extern int selected_model_index; // 선택된 객체의 인덱스
 
+extern glm::vec3 previous_movement_vec;
 extern glm::vec3 movement_vec;
 extern float movement_speed;
+extern bool moving_flag;
 
 char* filetobuf(const char* file);
 void make_vertexShaders();
@@ -87,3 +90,5 @@ void CreatePointAtOrigin(float ogl_x, float ogl_y);
 void AddVertexToLineStrip(float ogl_x, float ogl_y); // 함수 이름 변경
 void CreateTriangleAtOrigin(float ogl_x, float ogl_y);
 void CreateSquareAtOrigin(float ogl_x, float ogl_y);
+void Translation();
+void ChangeConsoleColor(int color);

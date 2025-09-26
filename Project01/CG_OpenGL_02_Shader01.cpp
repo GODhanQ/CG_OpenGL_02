@@ -1,6 +1,9 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "VarANDFunc_02_Shader01.h"
 
+constexpr int COLOR_DEFAULT{ 0x7 };
+constexpr int COLOR_RED{ 0xC };
+constexpr int COLOR_YELLOW{ 0xE };
 auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 std::default_random_engine dre(seed);
 std::uniform_real_distribution<float> urd_0_1(0.0f, 1.0f);
@@ -11,6 +14,8 @@ GLuint vertexShader;
 GLuint fragmentShader;
 
 GLuint VAO, VBO_pos, VBO_color, VBO, EBO;
+
+DrawBatchManager drawBatchManager;
 
 // Vertex Data : position(x,y,z), color(r,g,b)
 std::vector<Vertex_glm> Vertex_glm_vec;
@@ -33,9 +38,6 @@ void main(int argc, char** argv)
 	make_vertexShaders();
 	make_fragmentShaders();
 	shaderProgramID = make_shaderProgram();
-
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
 
 	INIT_BUFFER();
 
@@ -62,9 +64,13 @@ GLvoid drawScene() {
     glUniform1i(glGetUniformLocation(shaderProgramID, "u_IsPicking"), GL_FALSE);
     glUniform1i(glGetUniformLocation(shaderProgramID, "u_UseOverrideColor"), GL_FALSE);
 
+	if (moving_flag) {
+		Translation();
+	}
+
 	if (!index_vec.empty()) {
 		glBindVertexArray(VAO);
-		
+			
 		glPointSize(10.0);
 		glLineWidth(5.0);
 
@@ -125,7 +131,10 @@ void Keyboard(unsigned char key, int x, int y) {
 		}
 		DrawPoint_mode = !DrawPoint_mode;
 
-		std::cout << "Point Drawing Mode :" << (DrawPoint_mode ? " On" : " Off") << '\n';
+		std::cout << "Point Drawing Mode :";
+		ChangeConsoleColor(DrawPoint_mode ? COLOR_YELLOW : COLOR_DEFAULT);
+		std::cout << (DrawPoint_mode ? " On" : " Off") << '\n';
+		ChangeConsoleColor(COLOR_DEFAULT);
 		break;
 	case 'l':
 		if (DrawPoint_mode || DrawTriangle_mode || DrawSquare_mode) {
@@ -138,7 +147,10 @@ void Keyboard(unsigned char key, int x, int y) {
 			active_line_strip_model_index = -1;
 		}
 
-		std::cout << "Line Drawing Mode :" << (DrawLine_mode ? " On" : " Off") << '\n';
+		std::cout << "Line Drawing Mode :";
+		ChangeConsoleColor(DrawLine_mode ? COLOR_YELLOW : COLOR_DEFAULT);
+		std::cout << (DrawLine_mode ? " On" : " Off") << '\n';
+		ChangeConsoleColor(COLOR_DEFAULT);
 		break;
 	case 't':
 		if (DrawLine_mode) { // 라인 모드가 켜져 있으면 다른 모드 선택 불가
@@ -151,9 +163,12 @@ void Keyboard(unsigned char key, int x, int y) {
 		}
 		DrawTriangle_mode = !DrawTriangle_mode;
 
-		std::cout << "Triangle Drawing Mode :" << (DrawTriangle_mode ? " On" : " Off") << '\n';
+		std::cout << "Triangle Drawing Mode :";
+		ChangeConsoleColor(DrawTriangle_mode ? COLOR_YELLOW : COLOR_DEFAULT);
+		std::cout << (DrawTriangle_mode ? " On" : " Off") << '\n';
+		ChangeConsoleColor(COLOR_DEFAULT);
 		break;
-	case 's':
+	case 'r':
 		if (DrawLine_mode) { // 라인 모드가 켜져 있으면 다른 모드 선택 불가
 			std::cout << "Please deactivate Line Drawing Mode ('l') first.\n";
 			break;
@@ -164,22 +179,46 @@ void Keyboard(unsigned char key, int x, int y) {
 		}
 		DrawSquare_mode = !DrawSquare_mode;
 
-		std::cout << "Square Drawing Mode :" << (DrawSquare_mode ? " On" : " Off") << '\n';
+		std::cout << "Square Drawing Mode :";
+		ChangeConsoleColor(DrawSquare_mode ? COLOR_YELLOW : COLOR_DEFAULT);
+		std::cout << (DrawSquare_mode ? " On" : " Off") << '\n';
+		ChangeConsoleColor(COLOR_DEFAULT);
 		break;
-	case 'c': // 객체 선택 모드 토글 키
+	case 's': // 객체 선택 모드 토글 키
 		is_picking_mode = !is_picking_mode;
 		if (is_picking_mode) {
-			std::cout << "Picking Mode: ON. Click to select an object.\n";
+			std::cout << "Picking Mode:";
+			ChangeConsoleColor(COLOR_YELLOW);
+			std::cout << " ON    ";
+			ChangeConsoleColor(COLOR_DEFAULT);
+			std::cout << "Click to select an object.\n";
+
 			// 다른 모든 그리기 모드 비활성화
 			DrawPoint_mode = DrawLine_mode = DrawTriangle_mode = DrawSquare_mode = false;
 			active_line_strip_model_index = -1;
 			selected_model_index = -1; // 선택 모드 진입 시 기존 선택 해제
 		}
 		else {
-			std::cout << "Picking Mode: OFF.\n";
+			std::cout << "Picking Mode:";
+			ChangeConsoleColor(COLOR_YELLOW);
+			std::cout << " OFF.\n";
+			ChangeConsoleColor(COLOR_DEFAULT);
 			selected_model_index = -1; // 선택 해제
 		}
 		glutPostRedisplay(); // 화면 갱신하여 하이라이트 제거
+		break;
+	case 'c':
+		Vertex_glm_vec.clear();
+		index_vec.clear();
+		Model_vec.clear();
+
+		Current_Diagram_Count = 0;
+		active_line_strip_model_index = -1;
+		selected_model_index = -1;
+		std::cout << "Cleared all diagrams.\n";
+
+		UPDATE_BUFFER();
+		glutPostRedisplay();
 		break;
 	case 'q':
 		exit(0);
@@ -187,38 +226,77 @@ void Keyboard(unsigned char key, int x, int y) {
 }
 
 void SpecialKeyboard(int key, int x, int y) {
+	if (key < 0 || key >= 256) {
+		std::cout << "Invalid special key code: " << key << std::endl;
+		return;
+	}
+
 	switch (key) {
 	case GLUT_KEY_UP:
 		movement_vec.y += movement_speed;
+
+		std::cout << "Pressed UP Key\n";
+		std::cout << "movement_vec.y: " << movement_vec.y << "\n";
 		break;
 	case GLUT_KEY_DOWN:
 		movement_vec.y -= movement_speed;
+
+		std::cout << "Pressed DOWN Key\n";
+		std::cout << "movement_vec.y: " << movement_vec.y << "\n";
 		break;
 	case GLUT_KEY_LEFT:
 		movement_vec.x -= movement_speed;
+
+		std::cout << "Pressed LEFT Key\n";
+		std::cout << "movement_vec.x: " << movement_vec.x << "\n";
 		break;
 	case GLUT_KEY_RIGHT:
 		movement_vec.x += movement_speed;
+
+		std::cout << "Pressed RIGHT Key\n";
+		std::cout << "movement_vec.x: " << movement_vec.x << "\n";
 		break;
 	}
+
+	moving_flag = (movement_vec.x != 0.0f || movement_vec.y != 0.0f);
+
 	glutPostRedisplay();
 }
 
 void SpecialKeyboardUp(int key, int x, int y) {
+	if (key < 0 || key >= 256) {
+		return;
+	}
+
 	switch (key) {
 	case GLUT_KEY_UP:
 		movement_vec.y -= movement_speed;
+
+		std::cout << "Unpressed UP Key\n";
+		std::cout << "stop moving. movement_vec.y: " << movement_vec.y << "\n";
 		break;
 	case GLUT_KEY_DOWN:
 		movement_vec.y += movement_speed;
+
+		std::cout << "Unpressed DOWN Key\n";
+		std::cout << "stop moving. movement_vec.y: " << movement_vec.y << "\n";
 		break;
 	case GLUT_KEY_LEFT:
 		movement_vec.x += movement_speed;
+
+		std::cout << "Unpressed LEFT Key\n";
+		std::cout << "stop moving. movement_vec.x: " << movement_vec.x << "\n";
 		break;
 	case GLUT_KEY_RIGHT:
 		movement_vec.x -= movement_speed;
+
+		std::cout << "Unpressed RIGHT Key\n";
+		std::cout << "stop moving. movement_vec.x: " << movement_vec.x << "\n";
 		break;
 	}
+
+	moving_flag = (movement_vec.x != 0.0f || movement_vec.y != 0.0f);
+	
 	glutPostRedisplay();
 }
 
@@ -229,7 +307,11 @@ void MouseClick(int button , int state, int x, int y) {
             if (selected_model_index != -1) {
                 std::cout << "Object " << selected_model_index << " selected.\n";
             } else {
-                std::cout << "No object selected.\n";
+                std::cout << "No object selected.  ";
+				std::cout << "Picking Mode:";
+				ChangeConsoleColor(COLOR_YELLOW);
+				std::cout << ((is_picking_mode) ? " ON." : " OFF.") << '\n';
+				ChangeConsoleColor(COLOR_DEFAULT);
             }
             glutPostRedisplay(); // 선택 결과를 화면에 반영
             return;
@@ -349,8 +431,8 @@ GLuint make_shaderProgram()
 	glAttachShader(shaderID, vertexShader);			//--- 세이더 프로그램에 버텍스 세이더 붙이기
 	glAttachShader(shaderID, fragmentShader);		//--- 세이더 프로그램에 프래그먼트 세이더 붙이기
 	glLinkProgram(shaderID);						//--- 세이더 프로그램 링크하기
-	//glDeleteShader(vertexShader);					//--- 세이더 객체를 세이더 프로그램에 링크했음으로, 세이더 객체 자체는 삭제 가능
-	//glDeleteShader(fragmentShader);
+	glDeleteShader(vertexShader);					//--- 세이더 객체를 세이더 프로그램에 링크했음으로, 세이더 객체 자체는 삭제 가능
+	glDeleteShader(fragmentShader);
 	glGetProgramiv(shaderID, GL_LINK_STATUS, &result); // ---세이더가 잘 연결되었는지 체크하기
 	if (!result) {
 		glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
@@ -442,13 +524,11 @@ void CreatePointAtOrigin(float ogl_x, float ogl_y) {
 
 
 void AddVertexToLineStrip(float ogl_x, float ogl_y) {
-	// 새 정점 생성
 	Vertex_glm v;
 	v.position = glm::vec3(ogl_x, ogl_y, 0.0f);
 	v.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 
 	if (active_line_strip_model_index == -1) {
-		// --- 새로운 라인 스트립 시작 ---
 		Shape shape;
 		shape.draw_mode = GL_LINE_STRIP;
 		shape.index_count = 1; // 시작은 정점 1개
@@ -464,16 +544,11 @@ void AddVertexToLineStrip(float ogl_x, float ogl_y) {
 		std::cout << "Started a new Line Strip.\n";
 	}
 	else {
-		// --- 기존 라인 스트립에 정점 추가 ---
 		Shape& shape = Model_vec[active_line_strip_model_index];
 
-		// 새 정점을 전체 정점 벡터의 맨 뒤에 추가
 		Vertex_glm_vec.push_back(v);
-		
-		// 새 인덱스를 전체 인덱스 벡터의 맨 뒤에 추가
-		// 로컬 인덱스는 현재 shape이 가진 인덱스 개수와 동일
 		index_vec.push_back(shape.index_count); 
-		// 이 Shape을 그릴 때 사용할 인덱스 개수 1 증가
+
 		shape.index_count++; 
 
 		std::cout << "Added a vertex to the current Line Strip. Total vertices: " << shape.index_count << "\n";
@@ -595,7 +670,7 @@ int PickObject(int x, int y) {
 
 	// 마우스 위치의 픽셀 색상 읽기
 	unsigned char pixel[4];
-	int inverted_y = glutGet(GLUT_WINDOW_HEIGHT) - y; // OpenGL은 y좌표가 아래에서 위로 증가
+	int inverted_y = glutGet(GLUT_WINDOW_HEIGHT) - y;
 	glReadPixels(x, inverted_y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
 
 	// 읽은 색상을 다시 객체 인덱스로 변환
@@ -604,11 +679,61 @@ int PickObject(int x, int y) {
 	// Picking 모드 비활성화
 	glUniform1i(isPickingLoc, GL_FALSE);
 
-	// 일반 렌더링을 위해 화면을 다시 지울 필요는 없음. drawScene에서 처리.
-
 	if (pickedID == 0 || pickedID > Model_vec.size()) {
-		return -1; // 배경 또는 유효하지 않은 ID
+		return -1;
 	}
 
-	return pickedID - 1; // 0-based 인덱스로 변환하여 반환
+	return pickedID - 1;
+}
+
+void Translation() {
+	std::cout << "Translating selected object. Model num : " << selected_model_index << '\n';
+
+	if (selected_model_index != -1 && moving_flag) {
+		Shape& shape = Model_vec[selected_model_index];
+		size_t index_start = shape.index_offset / sizeof(unsigned int);
+		std::vector<bool> vertex_moved(Vertex_glm_vec.size(), false);
+
+		glm::vec3 normalized_movement = movement_vec;
+		float magnitude = glm::length(movement_vec);
+		if (magnitude > 0.0f) {
+			normalized_movement = glm::normalize(movement_vec) * movement_speed;
+		}
+
+		for (int i = 0; i < shape.index_count; ++i) {
+			unsigned int local_index = index_vec[index_start + i];
+			int actual_vertex_index = shape.base_vertex + local_index;
+
+			if (actual_vertex_index < 0 || actual_vertex_index >= Vertex_glm_vec.size()) {
+				std::cout << "Vertex index out of bounds: " << actual_vertex_index << ". Translation aborted.\n";
+				return;
+			}
+			
+			if (Vertex_glm_vec[actual_vertex_index].position.x + normalized_movement.x < -1.0f || 
+				Vertex_glm_vec[actual_vertex_index].position.x + normalized_movement.x > 1.0f ||
+				Vertex_glm_vec[actual_vertex_index].position.y + normalized_movement.y < -1.0f || 
+				Vertex_glm_vec[actual_vertex_index].position.y + normalized_movement.y > 1.0f) {
+				std::cout << "Translation would move vertex out of bounds: " << actual_vertex_index << ". Translation aborted.\n";
+				return;
+			}
+		}
+
+		for (int i = 0; i < shape.index_count; ++i) {
+			unsigned int local_index = index_vec[index_start + i];
+			int actual_vertex_index = shape.base_vertex + local_index;
+
+			if (!vertex_moved[actual_vertex_index]) {
+				Vertex_glm_vec[actual_vertex_index].position += normalized_movement;
+				vertex_moved[actual_vertex_index] = true;
+			}
+		}
+	}
+
+	UPDATE_BUFFER();
+	glutPostRedisplay();
+}
+
+void ChangeConsoleColor(int color) {
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(hConsole, color);
 }

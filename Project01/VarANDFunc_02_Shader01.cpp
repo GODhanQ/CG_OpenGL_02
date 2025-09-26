@@ -15,8 +15,10 @@ int active_line_strip_model_index = -1;
 bool is_picking_mode = false; // 객체 선택 모드 활성화 상태
 int selected_model_index = -1; // 선택된 객체의 인덱스
 
+glm::vec3 previous_movement_vec{ 0.0f, 0.0f, 0.0f };
 glm::vec3 movement_vec{ 0, 0, 0 };
-float movement_speed{ 0.02f };
+float movement_speed{ 0.002f };
+bool moving_flag{ false };
 
 struct Vertex {
 	std::tuple<float, float, float> position;
