@@ -60,9 +60,9 @@ GLvoid drawScene() {
 
 	glUseProgram(shaderProgramID);
 
-    // 모든 그리기를 시작하기 전에 Picking 및 Override 모드를 비활성화
-    glUniform1i(glGetUniformLocation(shaderProgramID, "u_IsPicking"), GL_FALSE);
-    glUniform1i(glGetUniformLocation(shaderProgramID, "u_UseOverrideColor"), GL_FALSE);
+	// 모든 그리기를 시작하기 전에 Picking 및 Override 모드를 비활성화
+	glUniform1i(glGetUniformLocation(shaderProgramID, "u_IsPicking"), GL_FALSE);
+	glUniform1i(glGetUniformLocation(shaderProgramID, "u_UseOverrideColor"), GL_FALSE);
 
 	if (moving_flag) {
 		Translation();
@@ -70,41 +70,41 @@ GLvoid drawScene() {
 
 	if (!index_vec.empty()) {
 		glBindVertexArray(VAO);
-			
+
 		glPointSize(10.0);
 		glLineWidth(5.0);
 
 		drawBatchManager.prepareDrawCalls(Model_vec);
 		drawBatchManager.drawAll();
 	}
-	
-    // 선택된 객체가 있다면, 그 위에 하이라이트(외곽선)를 덧그림
-    if (selected_model_index != -1 && selected_model_index < Model_vec.size()) {
-        Shape& selected_shape = Model_vec[selected_model_index];
-        
-        // 하이라이트 모드 활성화
-        GLint useOverrideLoc = glGetUniformLocation(shaderProgramID, "u_UseOverrideColor");
-        GLint overrideColorLoc = glGetUniformLocation(shaderProgramID, "u_OverrideColor");
-        glUniform1i(useOverrideLoc, GL_TRUE);
-        glUniform3f(overrideColorLoc, 1.0f, 1.0f, 0.0f); // 노란색으로 설정
 
-        // 외곽선을 그리기 위해 폴리곤 모드 변경
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glLineWidth(3.0); // 외곽선 두께
-        
-        glBindVertexArray(VAO);
-        glDrawElementsBaseVertex(
-            selected_shape.draw_mode,
-            selected_shape.index_count,
-            GL_UNSIGNED_INT,
-            (void*)selected_shape.index_offset,
-            selected_shape.base_vertex
-        );
+	// 선택된 객체가 있다면, 그 위에 하이라이트(외곽선)를 덧그림
+	if (selected_model_index != -1 && selected_model_index < Model_vec.size()) {
+		Shape& selected_shape = Model_vec[selected_model_index];
 
-        // 원래 렌더링 상태로 복구
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glUniform1i(useOverrideLoc, GL_FALSE);
-    }
+		// 하이라이트 모드 활성화
+		GLint useOverrideLoc = glGetUniformLocation(shaderProgramID, "u_UseOverrideColor");
+		GLint overrideColorLoc = glGetUniformLocation(shaderProgramID, "u_OverrideColor");
+		glUniform1i(useOverrideLoc, GL_TRUE);
+		glUniform3f(overrideColorLoc, 1.0f, 1.0f, 0.0f); // 노란색으로 설정
+
+		// 외곽선을 그리기 위해 폴리곤 모드 변경
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glLineWidth(3.0); // 외곽선 두께
+
+		glBindVertexArray(VAO);
+		glDrawElementsBaseVertex(
+			selected_shape.draw_mode,
+			selected_shape.index_count,
+			GL_UNSIGNED_INT,
+			(void*)selected_shape.index_offset,
+			selected_shape.base_vertex
+		);
+
+		// 원래 렌더링 상태로 복구
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glUniform1i(useOverrideLoc, GL_FALSE);
+	}
 
 	glutSwapBuffers();
 }
@@ -296,26 +296,27 @@ void SpecialKeyboardUp(int key, int x, int y) {
 	}
 
 	moving_flag = (movement_vec.x != 0.0f || movement_vec.y != 0.0f);
-	
+
 	glutPostRedisplay();
 }
 
-void MouseClick(int button , int state, int x, int y) {
+void MouseClick(int button, int state, int x, int y) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        if (is_picking_mode) {
-            selected_model_index = PickObject(x, y);
-            if (selected_model_index != -1) {
-                std::cout << "Object " << selected_model_index << " selected.\n";
-            } else {
-                std::cout << "No object selected.  ";
+		if (is_picking_mode) {
+			selected_model_index = PickObject(x, y);
+			if (selected_model_index != -1) {
+				std::cout << "Object " << selected_model_index << " selected.\n";
+			}
+			else {
+				std::cout << "No object selected.  ";
 				std::cout << "Picking Mode:";
 				ChangeConsoleColor(COLOR_YELLOW);
 				std::cout << ((is_picking_mode) ? " ON." : " OFF.") << '\n';
 				ChangeConsoleColor(COLOR_DEFAULT);
-            }
-            glutPostRedisplay(); // 선택 결과를 화면에 반영
-            return;
-        }
+			}
+			glutPostRedisplay(); // 선택 결과를 화면에 반영
+			return;
+		}
 
 		if (Current_Diagram_Count >= 10 && active_line_strip_model_index == -1) { // 새 도형을 만들 때만 개수 체크
 			std::cout << "Maximum number of Diagram reached (10). Cannot add more.\n";
@@ -456,22 +457,17 @@ void INIT_BUFFER()
 
 	glBindVertexArray(VAO);
 
-	// 1. VBO와 EBO를 바인딩합니다.
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
-	// 2. 버퍼에 데이터를 먼저 할당합니다. (초기에는 비어있어도 괜찮습니다)
 	glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
 
-	// 3. 버퍼의 데이터 구조를 설명합니다. (glVertexAttribPointer)
-	//    이 함수는 현재 바인딩된 VBO를 기준으로 작동합니다.
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, position));
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, color));
 	glEnableVertexAttribArray(1);
 
-	// 4. VAO 바인딩을 해제하여 실수로 상태가 변경되는 것을 방지합니다.
 	glBindVertexArray(0);
 }
 
@@ -547,9 +543,9 @@ void AddVertexToLineStrip(float ogl_x, float ogl_y) {
 		Shape& shape = Model_vec[active_line_strip_model_index];
 
 		Vertex_glm_vec.push_back(v);
-		index_vec.push_back(shape.index_count); 
+		index_vec.push_back(shape.index_count);
 
-		shape.index_count++; 
+		shape.index_count++;
 
 		std::cout << "Added a vertex to the current Line Strip. Total vertices: " << shape.index_count << "\n";
 	}
@@ -708,10 +704,10 @@ void Translation() {
 				std::cout << "Vertex index out of bounds: " << actual_vertex_index << ". Translation aborted.\n";
 				return;
 			}
-			
-			if (Vertex_glm_vec[actual_vertex_index].position.x + normalized_movement.x < -1.0f || 
+
+			if (Vertex_glm_vec[actual_vertex_index].position.x + normalized_movement.x < -1.0f ||
 				Vertex_glm_vec[actual_vertex_index].position.x + normalized_movement.x > 1.0f ||
-				Vertex_glm_vec[actual_vertex_index].position.y + normalized_movement.y < -1.0f || 
+				Vertex_glm_vec[actual_vertex_index].position.y + normalized_movement.y < -1.0f ||
 				Vertex_glm_vec[actual_vertex_index].position.y + normalized_movement.y > 1.0f) {
 				std::cout << "Translation would move vertex out of bounds: " << actual_vertex_index << ". Translation aborted.\n";
 				return;
