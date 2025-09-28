@@ -25,7 +25,7 @@ int main(int argc, char** argv)
 {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | 0x0000);
-	glutInitWindowPosition(500, 50);
+	glutInitWindowPosition(500, 10);
 	glutInitWindowSize(Window_width, Window_height);
 	glutCreateWindow("Example2");
 
@@ -94,7 +94,6 @@ GLvoid drawScene() {
 
 	glutSwapBuffers();
 }
-
 GLvoid Reshape(int w, int h) {
 	glViewport(0, 0, w, h);
 }
@@ -125,8 +124,14 @@ void KeyBoard(unsigned char key, int x, int y) {
 		moving_mode2 = !moving_mode2;
 		is_activated_movement_func = true;
 
-		for (int i = 0; i < 4; ++i) {
-			move_vector[i] = { urd_mov_vec(dre), urd_mov_vec(dre), 0.0f };
+		if (moving_mode2) {
+			for (int i = 0; i < 4; ++i) {
+				zigzag_movement_speed[i] = urd_mov_vec(dre);
+				move_vector[i] = { -zigzag_movement_speed[i], 0.0f, 0.0f }; // Start moving left
+				zigzag_state[i] = ZigzagState::HORIZONTAL;
+				zigzag_vertical_direction[i] = -1; // Start by moving down
+				zigzag_transition_counter[i] = 0;
+			}
 		}
 
 		std::cout << "Movement Mode 2 (Zig Zag) : " << (moving_mode2 ? "ON" : "OFF") << "\n";
@@ -190,7 +195,6 @@ void KeyBoard(unsigned char key, int x, int y) {
 		exit(0);
 	}
 }
-
 void MouseClick(int button, int state, int x, int y) {
 	if (is_activated_movement_func) {
 		std::cout << "Movement mode was activated. Cannot modify triangles.\n";
@@ -314,7 +318,6 @@ void MouseClick(int button, int state, int x, int y) {
 		glutPostRedisplay();
 	}
 }
-
 std::pair<float, float> ConvertScreenToOpenGL(int screen_x, int screen_y) {
 	int width = glutGet(GLUT_WINDOW_WIDTH);
 	int height = glutGet(GLUT_WINDOW_HEIGHT);
@@ -359,7 +362,7 @@ void UPDATE_BUFFER()
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		return;
 	}
-	std::cout << "Updating VBO, EBO \n";
+	//std::cout << "Updating VBO, EBO \n";
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, Vertex_glm_vec.size() * sizeof(Vertex_glm), Vertex_glm_vec.data(), GL_DYNAMIC_DRAW);
@@ -369,7 +372,7 @@ void UPDATE_BUFFER()
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	std::cout << "Buffer Update Completed\n";
+	//std::cout << "Buffer Update Completed\n";
 }
 
 void Make_Triangle(Shape& shape, float ogl_x, float ogl_y, int quardrant) {
@@ -447,6 +450,13 @@ void clearModels() {
 		is_shrinking[i] = true;
 		circle_spiral_angle_offset[i] = 0.0f;
 		angular_speeds[i] = 0.0f;
+		model_rotation_angles[i] = 0.0f;
+
+		// Zigzag 상태 초기화
+		zigzag_state[i] = ZigzagState::HORIZONTAL;
+		zigzag_vertical_direction[i] = -1;
+		zigzag_transition_counter[i] = 0;
+		zigzag_movement_speed[i] = 0.0f;
 	}
 	Vertex_glm_vec.clear();
 	index_vec.clear();
@@ -455,20 +465,77 @@ void clearModels() {
 	UPDATE_BUFFER();
 	glutPostRedisplay();
 }
+void ApplyRotation(int model_index, float angle_degrees) {
+	if (!models[model_index].is_active || models[model_index].index_count == 0) {
+		return;
+	}
+
+	// 1. 모델의 중심 계산
+	glm::vec3 center(0.0f);
+	for (int j = 0; j < models[model_index].index_count; ++j) {
+		unsigned int vertex_index = index_vec[models[model_index].index_start + j];
+		center += Vertex_glm_vec[vertex_index].position;
+	}
+	center /= models[model_index].index_count;
+
+	// 2. 회전 각도 계산
+	float current_angle_rad = glm::radians(model_rotation_angles[model_index]);
+	float target_angle_rad = glm::radians(angle_degrees);
+	float rotation_angle_rad = target_angle_rad - current_angle_rad;
+
+	// 3. 회전 행렬 생성
+	glm::mat4 rotation_matrix = glm::rotate(glm::mat4(1.0f), rotation_angle_rad, glm::vec3(0.0f, 0.0f, 1.0f));
+
+	// 4. 각 정점을 중심 기준으로 회전
+	for (int j = 0; j < models[model_index].index_count; ++j) {
+		unsigned int vertex_index = index_vec[models[model_index].index_start + j];
+		Vertex_glm& vertex = Vertex_glm_vec[vertex_index];
+
+		// 중심으로 이동 -> 회전 -> 원래 위치로 복귀
+		glm::vec4 temp_pos = glm::vec4(vertex.position - center, 1.0f);
+		temp_pos = rotation_matrix * temp_pos;
+		vertex.position = glm::vec3(temp_pos) + center;
+	}
+
+	// 5. 현재 회전 각도 업데이트
+	model_rotation_angles[model_index] = angle_degrees;
+}
 
 void BouncingMovement() {
 	for (int i = 0; i < 4; ++i) {
 		if (models[i].is_active) {
+			bool collision = false;
 			for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
 				unsigned int vertex_index = index_vec[j];
 				Vertex_glm& vertex = Vertex_glm_vec[vertex_index];
-				if (vertex.position.x + move_vector[i].x > 1.0f || vertex.position.x + move_vector[i].x < -1.0f) {
+				if (vertex.position.x + move_vector[i].x > 1.0f) {
 					move_vector[i].x = -move_vector[i].x;
-					break;
+					ApplyRotation(i, 90.0f);
+					collision = true; break;
 				}
-				if (vertex.position.y + move_vector[i].y > 1.0f || vertex.position.y + move_vector[i].y < -1.0f) {
+				else if (vertex.position.x + move_vector[i].x < -1.0f) {
+					move_vector[i].x = -move_vector[i].x;
+					ApplyRotation(i, 270.0f);
+					collision = true; break;
+				}
+				if (vertex.position.y + move_vector[i].y > 1.0f) {
 					move_vector[i].y = -move_vector[i].y;
-					break;
+					ApplyRotation(i, 180.0f);
+					collision = true; break;
+				}
+				else if (vertex.position.y + move_vector[i].y < -1.0f) {
+					move_vector[i].y = -move_vector[i].y;
+					ApplyRotation(i, 0.0f);
+					collision = true; break;
+				}
+			}
+			if (collision) {
+				// 충돌 후 위치 보정
+				for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
+					unsigned int vertex_index = index_vec[j];
+					Vertex_glm& vertex = Vertex_glm_vec[vertex_index];
+					vertex.position.x = glm::clamp(vertex.position.x, -1.0f, 1.0f);
+					vertex.position.y = glm::clamp(vertex.position.y, -1.0f, 1.0f);
 				}
 			}
 
@@ -481,14 +548,109 @@ void BouncingMovement() {
 	}
 }
 void ZigzagMovement() {
+	const int transition_duration = 30; // 약 0.5초 (60FPS 기준)
 
+	for (int i = 0; i < 4; ++i) {
+		if (!models[i].is_active) continue;
+
+		// 상하단 경계 충돌 시 수직 이동 방향 변경 및 회전
+		for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
+			unsigned int vertex_index = index_vec[j];
+			Vertex_glm& vertex = Vertex_glm_vec[vertex_index];
+			if (vertex.position.y >= 1.0f && zigzag_vertical_direction[i] > 0) {
+				zigzag_vertical_direction[i] = -1; // 천장에 닿으면 아래로
+				ApplyRotation(i, 0.0f); // 아래 방향으로 회전
+			}
+			else if (vertex.position.y <= -1.0f && zigzag_vertical_direction[i] < 0) {
+				zigzag_vertical_direction[i] = 1; // 바닥에 닿으면 위로
+				ApplyRotation(i, 180.0f); // 위 방향으로 회전
+			}
+		}
+
+		if (zigzag_state[i] == ZigzagState::HORIZONTAL) {
+			bool horizontal_collision = false;
+			for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
+				unsigned int vertex_index = index_vec[j];
+				Vertex_glm& vertex = Vertex_glm_vec[vertex_index];
+				// 다음 프레임의 위치를 예측하여 충돌 검사
+				float next_x = vertex.position.x + move_vector[i].x;
+				if ((next_x >= 1.0f && move_vector[i].x > 0) || (next_x <= -1.0f && move_vector[i].x < 0)) {
+					horizontal_collision = true;
+					break;
+				}
+			}
+
+			if (horizontal_collision) {
+				// 충돌 시 위치 보정
+				float overshoot = 0.0f;
+				if (move_vector[i].x > 0) { // 오른쪽 벽과 충돌
+					float max_x = -2.0f;
+					for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
+						max_x = std::max(max_x, Vertex_glm_vec[index_vec[j]].position.x);
+					}
+					overshoot = max_x - 1.0f;
+				}
+				else { // 왼쪽 벽과 충돌
+					float min_x = 2.0f;
+					for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
+						min_x = std::min(min_x, Vertex_glm_vec[index_vec[j]].position.x);
+					}
+					overshoot = min_x + 1.0f;
+				}
+
+				for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
+					Vertex_glm_vec[index_vec[j]].position.x -= overshoot;
+				}
+
+				zigzag_state[i] = ZigzagState::VERTICAL_TRANSITION;
+				zigzag_transition_counter[i] = transition_duration;
+				// 수직 이동 시작
+				move_vector[i].y = abs(zigzag_movement_speed[i]) * zigzag_vertical_direction[i];
+				move_vector[i].x = 0;
+
+				// 수직 이동 방향에 맞춰 회전
+				if (zigzag_vertical_direction[i] > 0) {
+					ApplyRotation(i, 180.0f); // 위
+				}
+				else {
+					ApplyRotation(i, 0.0f); // 아래
+				}
+			}
+		}
+		else if (zigzag_state[i] == ZigzagState::VERTICAL_TRANSITION) {
+			std::cout << "move vertical" << std::endl;
+			zigzag_transition_counter[i]--;
+			if (zigzag_transition_counter[i] <= 0) {
+				zigzag_state[i] = ZigzagState::HORIZONTAL;
+				// 수평 이동 방향 전환하여 다시 시작
+				zigzag_movement_speed[i] = -zigzag_movement_speed[i];
+				move_vector[i].x = zigzag_movement_speed[i];
+				move_vector[i].y = 0;
+
+				// 수평 이동 방향에 맞춰 회전
+				if (move_vector[i].x > 0) {
+					ApplyRotation(i, 90.0f); // 오른쪽
+				}
+				else {
+					ApplyRotation(i, 270.0f); // 왼쪽
+				}
+			}
+		}
+
+		// 모든 정점 위치 업데이트
+		for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
+			unsigned int vertex_index = index_vec[j];
+			Vertex_glm& vertex = Vertex_glm_vec[vertex_index];
+			vertex.position += move_vector[i];
+		}
+	}
 }
 void RectSpiralMovement() {
 	for (int i = 0; i < 4; ++i) {
 		if (models[i].is_active) {
 			// 나선형 움직임 종료 조건: 경계가 역전되었고, 아직 중앙 정렬이 안된 경우
 			if (!is_centered[i] && (RectSpiral_boundary[i][3] >= RectSpiral_boundary[i][1] || RectSpiral_boundary[i][2] >= RectSpiral_boundary[i][0])) {
-				move_vector[i] = { 0.0f, 0.0f, 0.0f }; // 움직임 정지
+				move_vector[i] = { 0.0f, 0.0f, 0.0f };
 
 				// 모델의 현재 중심 계산
 				glm::vec3 current_center(0.0f);
@@ -508,7 +670,7 @@ void RectSpiralMovement() {
 					unsigned int vertex_index = index_vec[models[i].index_start + j];
 					Vertex_glm_vec[vertex_index].position += translation_to_center;
 				}
-				is_centered[i] = true; // 중앙 정렬 완료 플래그 설정
+				is_centered[i] = true;
 			}
 
 			// 이미 중앙에 정렬되었다면 더 이상 움직이지 않음
@@ -539,23 +701,26 @@ void RectSpiralMovement() {
 				case 3: // up
 					move_vector[i] = { 0.0f, speed, 0.0f };
 					RectSpiral_boundary[i][1] -= RectSpiral_shrink_rate; // 오른쪽 경계 축소
+					ApplyRotation(i, 180.0f); // 위쪽 충돌
 					break;
 				case 0: // left
 					move_vector[i] = { -speed, 0.0f, 0.0f };
 					RectSpiral_boundary[i][0] -= RectSpiral_shrink_rate; // 위쪽 경계 축소
+					ApplyRotation(i, 270.0f); // 왼쪽 충돌
 					break;
 				case 1: // down
 					move_vector[i] = { 0.0f, -speed, 0.0f };
 					RectSpiral_boundary[i][3] += RectSpiral_shrink_rate; // 왼쪽 경계 확장
+					ApplyRotation(i, 0.0f); // 아래쪽 충돌
 					break;
 				case 2: // right
 					move_vector[i] = { speed, 0.0f, 0.0f };
 					RectSpiral_boundary[i][2] += RectSpiral_shrink_rate; // 아래쪽 경계 확장
+					ApplyRotation(i, 90.0f); // 오른쪽 충돌
 					break;
 				}
 			}
 
-			// 모든 정점 위치 업데이트
 			for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
 				unsigned int vertex_index = index_vec[j];
 				Vertex_glm& vertex = Vertex_glm_vec[vertex_index];

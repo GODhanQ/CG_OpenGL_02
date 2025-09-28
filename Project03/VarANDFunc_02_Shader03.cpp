@@ -16,6 +16,13 @@ glm::vec3 move_vector[4] = {
 	{ 0.0f, 0.0f, 0.0f },
 	{ 0.0f, 0.0f, 0.0f }
 };
+float model_rotation_angles[4] = { 0.0f };
+
+ZigzagState zigzag_state[4] = { ZigzagState::HORIZONTAL };
+int zigzag_vertical_direction[4] = { -1 };
+int zigzag_transition_counter[4] = { 0 };
+float zigzag_movement_speed[4] = { 0.0f };
+
 glm::vec4 RectSpiral_boundary[4] = {
 	// 0 : top boundary, 1 : right boundary, 2 : bottom boundary, 3 : left boundary
 	{1.0f, 1.0f, -1.0f, -1.0f},

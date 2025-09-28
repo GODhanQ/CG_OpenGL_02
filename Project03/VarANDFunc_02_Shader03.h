@@ -61,6 +61,13 @@ extern float Triangle_range_Min, Triangle_range_Max;
 extern bool moving_mode1, moving_mode2, moving_mode3, moving_mode4, is_activated_movement_func;
 extern glm::vec3 translation_vector1, translation_vector2, translation_vector3, translation_vector4;
 extern glm::vec3 move_vector[4];
+extern float model_rotation_angles[4];
+
+enum class ZigzagState { HORIZONTAL, VERTICAL_TRANSITION };
+extern ZigzagState zigzag_state[4];
+extern int zigzag_vertical_direction[4]; // -1 for down, 1 for up
+extern int zigzag_transition_counter[4];
+extern float zigzag_movement_speed[4];
 
 extern glm::vec4 RectSpiral_boundary[4];
 extern int rectspiral_direction[4];
@@ -89,6 +96,7 @@ void UPDATE_BUFFER();
 void Make_Triangle(Shape& shape, float ogl_x, float ogl_y, int quardrant);
 void Translation();
 void clearModels();
+void ApplyRotation(int model_index, float angle_degrees);
 
 void BouncingMovement();
 void ZigzagMovement();
