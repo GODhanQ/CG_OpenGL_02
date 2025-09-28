@@ -23,7 +23,19 @@ glm::vec4 RectSpiral_boundary[4] = {
 	{1.0f, 1.0f, -1.0f, -1.0f},
 	{1.0f, 1.0f, -1.0f, -1.0f}
 };
+int rectspiral_direction[4]{ 0, 0, 0, 0 };
 float RectSpiral_shrink_rate{ 0.3f };
+bool is_centered[4]{ false, false, false, false };
+
+float circle_spiral_angle[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
+float circle_spiral_radius[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
+float circle_spiral_angle_offset[4]{ 0.0f, 0.0f, 0.0f, 0.0f }; // 추가
+bool is_shrinking[4]{ true, true, true, true };
+glm::vec3 circle_spiral_center_offset[4];
+float angular_speeds[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
+const float radius_change_rate = 0.001f;
+
+
 
 void DrawBatchManager::prepareDrawCalls(const Shape* all_models) {
 	fill_triangles_batch.counts.clear();

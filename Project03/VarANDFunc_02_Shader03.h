@@ -61,8 +61,20 @@ extern float Triangle_range_Min, Triangle_range_Max;
 extern bool moving_mode1, moving_mode2, moving_mode3, moving_mode4, is_activated_movement_func;
 extern glm::vec3 translation_vector1, translation_vector2, translation_vector3, translation_vector4;
 extern glm::vec3 move_vector[4];
+
 extern glm::vec4 RectSpiral_boundary[4];
+extern int rectspiral_direction[4];
 extern float RectSpiral_shrink_rate;
+extern bool is_centered[4];
+
+extern float circle_spiral_angle[4];
+extern float circle_spiral_radius[4];
+extern float circle_spiral_angle_offset[4]; // 추가
+extern bool is_shrinking[4];
+extern glm::vec3 circle_spiral_center_offset[4];
+extern float angular_speeds[4];
+extern const float radius_change_rate;
+
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);

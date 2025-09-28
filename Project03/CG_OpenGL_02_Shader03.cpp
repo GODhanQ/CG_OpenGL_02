@@ -102,22 +102,23 @@ GLvoid Reshape(int w, int h) {
 void KeyBoard(unsigned char key, int x, int y) {
 	switch (key) {
 	case'1':
-		if (moving_mode2 || moving_mode3 || moving_mode4) {
+		if (!moving_mode1 && (moving_mode2 || moving_mode3 || moving_mode4)) {
 			std::cout << "Another movement mode is already active. Please deactivate it first.\n";
 			return;
 		}
 		moving_mode1 = !moving_mode1;
 		is_activated_movement_func = true;
 
-		for (int i = 0;i < 4;++i) {
-			move_vector[i] = { urd_mov_vec(dre), urd_mov_vec(dre), 0.0f };
+		if (moving_mode1) {
+			for (int i = 0; i < 4; ++i) {
+				move_vector[i] = { urd_mov_vec(dre), urd_mov_vec(dre), 0.0f };
+			}
 		}
-
 		std::cout << "Movement Mode 1 (Bouncing) : " << (moving_mode1 ? "ON" : "OFF") << "\n";
 		glutPostRedisplay();
 		break;
 	case'2':
-		if (moving_mode1 || moving_mode3 || moving_mode4) {
+		if (!moving_mode2 && (moving_mode1 || moving_mode3 || moving_mode4)) {
 			std::cout << "Another movement mode is already active. Please deactivate it first.\n";
 			return;
 		}
@@ -132,32 +133,44 @@ void KeyBoard(unsigned char key, int x, int y) {
 		glutPostRedisplay();
 		break;
 	case'3':
-		if (moving_mode1 || moving_mode2 || moving_mode4) {
+		if (!moving_mode3 && (moving_mode1 || moving_mode2 || moving_mode4)) {
 			std::cout << "Another movement mode is already active. Please deactivate it first.\n";
 			return;
 		}
 		moving_mode3 = !moving_mode3;
 		is_activated_movement_func = true;
 
-		for (int i = 0; i < 4; ++i) {
-			move_vector[i] = { urd_mov_vec(dre), urd_mov_vec(dre), 0.0f };
+		if (moving_mode3) {
+			for (int i = 0; i < 4; ++i) {
+				float speed = urd_mov_vec(dre);
+				move_vector[i] = { speed, 0.0f, 0.0f }; // Start moving right
+				rectspiral_direction[i] = 2; // 2: right
+				RectSpiral_boundary[i] = { 1.0f, 1.0f, -1.0f, -1.0f };
+				is_centered[i] = false; // Reset centered flag
+			}
 		}
-
 		std::cout << "Movement Mode 3 (Rectangular Spiral) : " << (moving_mode3 ? "ON" : "OFF") << "\n";
 		glutPostRedisplay();
 		break;
 	case'4':
-		if (moving_mode1 || moving_mode2 || moving_mode3) {
+		if (!moving_mode4 && (moving_mode1 || moving_mode2 || moving_mode3)) {
 			std::cout << "Another movement mode is already active. Please deactivate it first.\n";
 			return;
 		}
 		moving_mode4 = !moving_mode4;
-		is_activated_movement_func = true;
+		is_activated_movement_func = moving_mode4;
 
-		for (int i = 0; i < 4; ++i) {
-			move_vector[i] = { urd_mov_vec(dre), urd_mov_vec(dre), 0.0f };
+		if (moving_mode4) {
+			for (int i = 0; i < 4; ++i) {
+				// 각 객체에 독립적인 회전 속도 할당
+				angular_speeds[i] = urd_mov_vec(dre);
+				// 각 사분면에 따라 90도씩 차이를 두어 각도 오프셋 설정
+				circle_spiral_angle_offset[i] = glm::radians(90.0f * i);
+				circle_spiral_angle[i] = 0.0f;
+				circle_spiral_radius[i] = 0.7f; // 시작 반지름
+				is_shrinking[i] = true;
+			}
 		}
-
 		std::cout << "Movement Mode 4 (Circle Spiral) : " << (moving_mode4 ? "ON" : "OFF") << "\n";
 		glutPostRedisplay();
 		break;
@@ -179,238 +192,136 @@ void KeyBoard(unsigned char key, int x, int y) {
 }
 
 void MouseClick(int button, int state, int x, int y) {
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && !is_activated_movement_func) {
-		if (drawing_type == NULL) {
-			std::cout << "Please select a drawing mode first ( 'a' : Fill, 'b' : Line )\n";
+	if (is_activated_movement_func) {
+		std::cout << "Movement mode was activated. Cannot modify triangles.\n";
+		return;
+	}
+	if (drawing_type == NULL) {
+		std::cout << "Please select a drawing mode first ( 'a' : Fill, 'b' : Line )\n";
+		return;
+	}
+
+	if (state == GLUT_DOWN) {
+		std::pair<float, float> ogl_xy = ConvertScreenToOpenGL(x, y);
+		float ogl_x = ogl_xy.first, ogl_y = ogl_xy.second;
+		std::cout << "Mouse Clicked at ( " << ogl_x << ", " << ogl_y << " )\n";
+
+		int target_quadrant = -1;
+		if (ogl_x >= 0.0f && ogl_y >= 0.0f) target_quadrant = 0;
+		else if (ogl_x < 0.0f && ogl_y >= 0.0f) target_quadrant = 1;
+		else if (ogl_x < 0.0f && ogl_y < 0.0f) target_quadrant = 2;
+		else if (ogl_x >= 0.0f && ogl_y < 0.0f) target_quadrant = 3;
+
+		if (target_quadrant == -1) {
+			std::cout << "Error determining quadrant.\n";
 			return;
 		}
 
-		std::pair<float, float> ogl_xy = ConvertScreenToOpenGL(x, y);
-		float ogl_x{ ogl_xy.first }, ogl_y{ ogl_xy.second };
-		std::cout << "Mouse Clicked at ( " << ogl_x << ", " << ogl_y << " )\n";
-
-		int target_shape_index = -1;
-
-		if (ogl_x >= 0.0f && ogl_y >= 0.0f) {
-			target_shape_index = 0;
-		}
-		else if (ogl_x < 0.0f && ogl_y >= 0.0f) {
-			target_shape_index = 1;
-		}
-		else if (ogl_x < 0.0f && ogl_y < 0.0f) {
-			target_shape_index = 2;
-		}
-		else if (ogl_x >= 0.0f && ogl_y < 0.0f) {
-			target_shape_index = 3;
-		}
-
-		if (target_shape_index != -1) {
-			std::map<int, GLenum> old_polygon_modes;
-			for (int i = 0; i < 4; ++i) {
-				if (models[i].is_active) {
-					old_polygon_modes[i] = models[i].polygon_mode;
+		// 1. 기존 상태 저장 (폴리곤 모드, 우클릭 시 필요한 색상)
+		std::map<int, GLenum> old_polygon_modes;
+		std::vector<glm::vec3> old_colors;
+		for (int i = 0; i < 4; ++i) {
+			if (models[i].is_active) {
+				old_polygon_modes[i] = models[i].polygon_mode;
+				if (button == GLUT_RIGHT_BUTTON && i == target_quadrant) {
+					for (int j = 0; j < models[i].index_count; ++j) {
+						unsigned int vertex_index = index_vec[models[i].index_start + j];
+						if (vertex_index < Vertex_glm_vec.size()) {
+							old_colors.push_back(Vertex_glm_vec[vertex_index].color);
+						}
+					}
 				}
 			}
+		}
 
-			auto it = Vertex_glm_vec.begin();
-			while (it != Vertex_glm_vec.end()) {
-				if (it->quadrant == target_shape_index) {
-					it = Vertex_glm_vec.erase(it);
-				}
-				else {
-					++it;
-				}
+		// 2. 새 정점 목록 생성
+		std::vector<Vertex_glm> new_vertex_vec;
+		// 대상이 아닌 사분면의 정점들은 그대로 복사
+		for (const auto& v : Vertex_glm_vec) {
+			if (v.quadrant != target_quadrant) {
+				new_vertex_vec.push_back(v);
 			}
+		}
 
-			glm::vec3 origin{ ogl_x, ogl_y, 0.0f };
-			Vertex_glm v1, v2, v3;
-			float top_ver_range = urdRange(dre);
-			float left_bottom_range = urdRange(dre);
-			float right_bottom_range = urdRange(dre);
-			v1.position = origin + glm::vec3(0.0f, top_ver_range, 0.0f);
-			v2.position = origin + glm::vec3(-left_bottom_range, -left_bottom_range, 0.0f);
-			v3.position = origin + glm::vec3(right_bottom_range, -right_bottom_range, 0.0f);
+		// 대상 사분면에 새 삼각형 정점 추가
+		glm::vec3 origin{ ogl_x, ogl_y, 0.0f };
+		Vertex_glm v1, v2, v3;
+		float top_ver_range = urdRange(dre);
+		float left_bottom_range = urdRange(dre);
+		float right_bottom_range = urdRange(dre);
+		v1.position = origin + glm::vec3(0.0f, top_ver_range, 0.0f);
+		v2.position = origin + glm::vec3(-left_bottom_range, -left_bottom_range, 0.0f);
+		v3.position = origin + glm::vec3(right_bottom_range, -right_bottom_range, 0.0f);
+		
+		if (button == GLUT_LEFT_BUTTON) { // 좌클릭: 모양과 색상 모두 변경 (새 랜덤 색상)
 			v1.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 			v2.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 			v3.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
-			v1.quadrant = v2.quadrant = v3.quadrant = target_shape_index;
-
-			Vertex_glm_vec.push_back(v1);
-			Vertex_glm_vec.push_back(v2);
-			Vertex_glm_vec.push_back(v3);
-
-			std::sort(Vertex_glm_vec.begin(), Vertex_glm_vec.end(), [](const Vertex_glm& a, const Vertex_glm& b) {
-				return a.quadrant < b.quadrant;
-				});
-
-			index_vec.clear();
-			int current_base_vertex = 0;
-			for (int i = 0; i < 4; ++i) {
-				models[i].is_active = false;
-
-				bool shape_found_in_quadrant = false;
-				for (const auto& vertex : Vertex_glm_vec) {
-					if (vertex.quadrant == i) {
-						shape_found_in_quadrant = true;
-						break;
-					}
-				}
-
-				if (shape_found_in_quadrant) {
-					models[i].is_active = true;
-					if (i == target_shape_index) {
-						models[i].polygon_mode = drawing_type;
-					}
-					else {
-						models[i].polygon_mode = old_polygon_modes[i];
-					}
-					models[i].base_vertex = current_base_vertex;
-					models[i].index_offset = index_vec.size() * sizeof(unsigned int);
-					models[i].index_start = index_vec.size();
-					models[i].index_count = 3;
-
-					index_vec.push_back(current_base_vertex);
-					index_vec.push_back(current_base_vertex + 1);
-					index_vec.push_back(current_base_vertex + 2);
-
-					current_base_vertex += 3;
-				}
+		} else { // 우클릭: 모양만 변경 (기존 색상 유지)
+			if (old_colors.size() >= 3) {
+				v1.color = old_colors[0];
+				v2.color = old_colors[1];
+				v3.color = old_colors[2];
+			} else { // 기존 색상이 없으면 랜덤 색상으로 대체
+				v1.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
+				v2.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
+				v3.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 			}
 		}
-		else {
-			std::cout << "Error determining quadrant.\n";
-			return;
+		v1.quadrant = v2.quadrant = v3.quadrant = target_quadrant;
+		new_vertex_vec.push_back(v1);
+		new_vertex_vec.push_back(v2);
+		new_vertex_vec.push_back(v3);
+
+		// 3. 정점 데이터 정렬 및 교체
+		std::sort(new_vertex_vec.begin(), new_vertex_vec.end(), [](const Vertex_glm& a, const Vertex_glm& b) {
+			return a.quadrant < b.quadrant;
+		});
+		Vertex_glm_vec = new_vertex_vec;
+
+		// 4. 인덱스 및 모델 정보 완전 재구성
+		index_vec.clear();
+		for (int i = 0; i < 4; ++i) {
+			models[i].is_active = false;
+			std::vector<unsigned int> quadrant_indices;
+			for (unsigned int j = 0; j < Vertex_glm_vec.size(); ++j) {
+				if (Vertex_glm_vec[j].quadrant == i) {
+					quadrant_indices.push_back(j);
+				}
+			}
+
+			if (!quadrant_indices.empty()) {
+				models[i].is_active = true;
+				if (i == target_quadrant) {
+					models[i].polygon_mode = drawing_type;
+				} else if (old_polygon_modes.count(i)) {
+					models[i].polygon_mode = old_polygon_modes[i];
+				} else {
+					models[i].polygon_mode = GL_FILL; // 기본값
+				}
+
+				models[i].base_vertex = quadrant_indices.empty() ? 0 : quadrant_indices[0];
+				models[i].index_start = index_vec.size();
+				models[i].index_count = quadrant_indices.size();
+				models[i].index_offset = models[i].index_start * sizeof(unsigned int);
+				
+				index_vec.insert(index_vec.end(), quadrant_indices.begin(), quadrant_indices.end());
+			}
 		}
 
 		drawBatchManager.prepareDrawCalls(models);
 		UPDATE_BUFFER();
 		glutPostRedisplay();
-	}
-	else if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN && !is_activated_movement_func) {
-		if (drawing_type == NULL) {
-			std::cout << "Please select a drawing mode first ( 'a' : Fill, 'b' : Line )\n";
-			return;
-		}
-
-		std::pair<float, float> ogl_xy = ConvertScreenToOpenGL(x, y);
-		float ogl_x{ ogl_xy.first }, ogl_y{ ogl_xy.second };
-		std::cout << "Mouse Clicked at ( " << ogl_x << ", " << ogl_y << " )\n";
-
-		int target_shape_index = -1;
-
-		if (ogl_x >= 0.0f && ogl_y >= 0.0f) {
-			target_shape_index = 0;
-		}
-		else if (ogl_x < 0.0f && ogl_y >= 0.0f) {
-			target_shape_index = 1;
-		}
-		else if (ogl_x < 0.0f && ogl_y < 0.0f) {
-			target_shape_index = 2;
-		}
-		else if (ogl_x >= 0.0f && ogl_y < 0.0f) {
-			target_shape_index = 3;
-		}
-
-		// save polygon modes
-		if (target_shape_index != -1) {
-			std::map<int, GLenum> old_polygon_modes;
-			for (int i = 0; i < 4; ++i) {
-				if (models[i].is_active) {
-					old_polygon_modes[i] = models[i].polygon_mode;
-				}
-			}
-			
-			// save old colors
-			std::vector<glm::vec3> old_color;
-			Shape& target_shape = models[target_shape_index];
-			old_color.push_back(Vertex_glm_vec[target_shape.index_start].color);
-			old_color.push_back(Vertex_glm_vec[target_shape.index_start + 1].color);
-			old_color.push_back(Vertex_glm_vec[target_shape.index_start + 2].color);
-
-			// erase vertices in the target quadrant
-			auto it = Vertex_glm_vec.begin();
-			while (it != Vertex_glm_vec.end()) {
-				if (it->quadrant == target_shape_index) {
-					it = Vertex_glm_vec.erase(it);
-				}
-				else {
-					++it;
-				}
-			}
-
-			// 3. restting the triangle
-			glm::vec3 origin{ ogl_x, ogl_y, 0.0f };
-			Vertex_glm v1, v2, v3;
-			float top_ver_range = urdRange(dre);
-			float left_bottom_range = urdRange(dre);
-			float right_bottom_range = urdRange(dre);
-			v1.position = origin + glm::vec3(0.0f, top_ver_range, 0.0f);
-			v2.position = origin + glm::vec3(-left_bottom_range, -left_bottom_range, 0.0f);
-			v3.position = origin + glm::vec3(right_bottom_range, -right_bottom_range, 0.0f);
-			v1.color = old_color[0];
-			v2.color = old_color[1];
-			v3.color = old_color[2];
-			v1.quadrant = v2.quadrant = v3.quadrant = target_shape_index;
-
-			Vertex_glm_vec.push_back(v1);
-			Vertex_glm_vec.push_back(v2);
-			Vertex_glm_vec.push_back(v3);
-
-			std::sort(Vertex_glm_vec.begin(), Vertex_glm_vec.end(), [](const Vertex_glm& a, const Vertex_glm& b) {
-				return a.quadrant < b.quadrant;
-				});
-
-			index_vec.clear();
-			int current_base_vertex = 0;
-			for (int i = 0; i < 4; ++i) {
-				models[i].is_active = false;
-
-				bool shape_found_in_quadrant = false;
-				for (const auto& vertex : Vertex_glm_vec) {
-					if (vertex.quadrant == i) {
-						shape_found_in_quadrant = true;
-						break;
-					}
-				}
-
-				if (shape_found_in_quadrant) {
-					models[i].is_active = true;
-					if (i == target_shape_index) {
-						models[i].polygon_mode = drawing_type;
-					}
-					else {
-						models[i].polygon_mode = old_polygon_modes[i];
-					}
-					models[i].base_vertex = current_base_vertex;
-					models[i].index_offset = index_vec.size() * sizeof(unsigned int);
-					models[i].index_start = index_vec.size();
-					models[i].index_count = 3;
-
-					index_vec.push_back(current_base_vertex);
-					index_vec.push_back(current_base_vertex + 1);
-					index_vec.push_back(current_base_vertex + 2);
-
-					current_base_vertex += 3;
-				}
-			}
-		}
-		else {
-			std::cout << "Error determining quadrant.\n";
-			return;
-		}
-
-		drawBatchManager.prepareDrawCalls(models);
-		UPDATE_BUFFER();
-		glutPostRedisplay();
-	}
-	if (is_activated_movement_func) {
-		std::cout << "Movement mode was actived. Cannot modify triangles.\n";
-		return;
 	}
 }
+
 std::pair<float, float> ConvertScreenToOpenGL(int screen_x, int screen_y) {
-	float ogl_x = (2.0f * screen_x) / Window_width - 1.0f;
-	float ogl_y = 1.0f - (2.0f * screen_y) / Window_height;
+	int width = glutGet(GLUT_WINDOW_WIDTH);
+	int height = glutGet(GLUT_WINDOW_HEIGHT);
+
+	float ogl_x = (2.0f * screen_x) / width - 1.0f;
+	float ogl_y = 1.0f - (2.0f * screen_y) / height;
+
 	return { ogl_x, ogl_y };
 }
 
@@ -470,7 +381,7 @@ void Make_Triangle(Shape& shape, float ogl_x, float ogl_y, int quardrant) {
 	v1.position = origin + glm::vec3(0.0f, triangle_range, 0.0f);
 	v2.position = origin + glm::vec3(-triangle_range, -triangle_range, 0.0f);
 	v3.position = origin + glm::vec3(triangle_range, -triangle_range, 0.0f);
-	
+
 	v1.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 	v2.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 	v3.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
@@ -485,21 +396,21 @@ void Make_Triangle(Shape& shape, float ogl_x, float ogl_y, int quardrant) {
 	shape.base_vertex = static_cast<GLint>(Vertex_glm_vec.size());
 	shape.index_offset = static_cast<GLsizei>(index_vec.size() * sizeof(unsigned int));
 
-	std::cout << "Shape info - base_vertex: " << shape.base_vertex 
-			  << ", index_offset: " << shape.index_offset << "\n";
+	std::cout << "Shape info - base_vertex: " << shape.base_vertex
+		<< ", index_offset: " << shape.index_offset << "\n";
 
-	Vertex_glm_vec.push_back(v1); 
-	Vertex_glm_vec.push_back(v2);	
+	Vertex_glm_vec.push_back(v1);
+	Vertex_glm_vec.push_back(v2);
 	Vertex_glm_vec.push_back(v3);
-	
+
 	unsigned int base_index = static_cast<unsigned int>(shape.base_vertex);
 	shape.index_start = index_vec.size();
-	index_vec.push_back(base_index); 
-	index_vec.push_back(base_index + 1);	
+	index_vec.push_back(base_index);
+	index_vec.push_back(base_index + 1);
 	index_vec.push_back(base_index + 2);
 
-	std::cout << "Index values: " << base_index << ", " << (base_index + 1) 
-			  << ", " << (base_index + 2) << "\n";
+	std::cout << "Index values: " << base_index << ", " << (base_index + 1)
+		<< ", " << (base_index + 2) << "\n";
 
 	shape.index_count = 3;
 	shape.polygon_mode = drawing_type;
@@ -524,9 +435,18 @@ void Translation() {
 }
 void clearModels() {
 	is_activated_movement_func = false;
+	moving_mode1 = moving_mode2 = moving_mode3 = moving_mode4 = false;
 
 	for (int i = 0; i < 4; i++) {
 		models[i] = Shape();
+		rectspiral_direction[i] = 0;
+		RectSpiral_boundary[i] = { 1.0f, 1.0f, -1.0f, -1.0f };
+		is_centered[i] = false;
+		circle_spiral_angle[i] = 0.0f;
+		circle_spiral_radius[i] = 0.0f;
+		is_shrinking[i] = true;
+		circle_spiral_angle_offset[i] = 0.0f;
+		angular_speeds[i] = 0.0f;
 	}
 	Vertex_glm_vec.clear();
 	index_vec.clear();
@@ -535,11 +455,13 @@ void clearModels() {
 	UPDATE_BUFFER();
 	glutPostRedisplay();
 }
+
 void BouncingMovement() {
 	for (int i = 0; i < 4; ++i) {
 		if (models[i].is_active) {
 			for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
-				Vertex_glm& vertex = Vertex_glm_vec[j];
+				unsigned int vertex_index = index_vec[j];
+				Vertex_glm& vertex = Vertex_glm_vec[vertex_index];
 				if (vertex.position.x + move_vector[i].x > 1.0f || vertex.position.x + move_vector[i].x < -1.0f) {
 					move_vector[i].x = -move_vector[i].x;
 					break;
@@ -551,7 +473,8 @@ void BouncingMovement() {
 			}
 
 			for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
-				Vertex_glm& vertex = Vertex_glm_vec[j];
+				unsigned int vertex_index = index_vec[j];
+				Vertex_glm& vertex = Vertex_glm_vec[vertex_index];
 				vertex.position += move_vector[i];
 			}
 		}
@@ -561,49 +484,133 @@ void ZigzagMovement() {
 
 }
 void RectSpiralMovement() {
-	std::uniform_real_distribution<float> urd_mov_vec(0.005f, 0.05f);
 	for (int i = 0; i < 4; ++i) {
-		float movement_speed = urd_mov_vec(dre);
 		if (models[i].is_active) {
-			glm::vec3 move_vector{ -movement_speed, 0, 0 };
+			// 나선형 움직임 종료 조건: 경계가 역전되었고, 아직 중앙 정렬이 안된 경우
+			if (!is_centered[i] && (RectSpiral_boundary[i][3] >= RectSpiral_boundary[i][1] || RectSpiral_boundary[i][2] >= RectSpiral_boundary[i][0])) {
+				move_vector[i] = { 0.0f, 0.0f, 0.0f }; // 움직임 정지
 
+				// 모델의 현재 중심 계산
+				glm::vec3 current_center(0.0f);
+				if (models[i].index_count > 0) {
+					for (int j = 0; j < models[i].index_count; ++j) {
+						unsigned int vertex_index = index_vec[models[i].index_start + j];
+						current_center += Vertex_glm_vec[vertex_index].position;
+					}
+					current_center /= models[i].index_count;
+				}
+
+				// 중심을 원점(0,0,0)으로 이동시키는 변환 벡터 계산
+				glm::vec3 translation_to_center = -current_center;
+
+				// 모델의 모든 정점에 변환 적용
+				for (int j = 0; j < models[i].index_count; ++j) {
+					unsigned int vertex_index = index_vec[models[i].index_start + j];
+					Vertex_glm_vec[vertex_index].position += translation_to_center;
+				}
+				is_centered[i] = true; // 중앙 정렬 완료 플래그 설정
+			}
+
+			// 이미 중앙에 정렬되었다면 더 이상 움직이지 않음
+			if (is_centered[i]) {
+				continue;
+			}
+
+			bool change_direction = false;
+			// 모든 정점이 경계에 도달했는지 확인
 			for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
-				Vertex_glm& vertex = Vertex_glm_vec[j];
-				vertex.position += move_vector;
-				// right boundary check
-				if (vertex.position.x > RectSpiral_boundary[i][1]) {
-					vertex.position.x = 1.0f;
-					move_vector.x = 0;
-					move_vector.y = -movement_speed;
-					RectSpiral_boundary[i][0] -= RectSpiral_shrink_rate;
+				unsigned int vertex_index = index_vec[j];
+				Vertex_glm& vertex = Vertex_glm_vec[vertex_index];
+				glm::vec3 next_pos = vertex.position + move_vector[i];
+
+				// 방향에 따라 경계 확인
+				if (rectspiral_direction[i] == 2 && next_pos.x > RectSpiral_boundary[i][1]) { change_direction = true; break; } // right
+				if (rectspiral_direction[i] == 3 && next_pos.y > RectSpiral_boundary[i][0]) { change_direction = true; break; } // up
+				if (rectspiral_direction[i] == 0 && next_pos.x < RectSpiral_boundary[i][3]) { change_direction = true; break; } // left
+				if (rectspiral_direction[i] == 1 && next_pos.y < RectSpiral_boundary[i][2]) { change_direction = true; break; } // down
+			}
+
+			if (change_direction) {
+				float speed = glm::length(move_vector[i]);
+				rectspiral_direction[i] = (rectspiral_direction[i] + 1) % 4; // 다음 방향으로 전환
+
+				// 방향에 따라 움직임 벡터 및 경계 수정
+				switch (rectspiral_direction[i]) {
+				case 3: // up
+					move_vector[i] = { 0.0f, speed, 0.0f };
+					RectSpiral_boundary[i][1] -= RectSpiral_shrink_rate; // 오른쪽 경계 축소
+					break;
+				case 0: // left
+					move_vector[i] = { -speed, 0.0f, 0.0f };
+					RectSpiral_boundary[i][0] -= RectSpiral_shrink_rate; // 위쪽 경계 축소
+					break;
+				case 1: // down
+					move_vector[i] = { 0.0f, -speed, 0.0f };
+					RectSpiral_boundary[i][3] += RectSpiral_shrink_rate; // 왼쪽 경계 확장
+					break;
+				case 2: // right
+					move_vector[i] = { speed, 0.0f, 0.0f };
+					RectSpiral_boundary[i][2] += RectSpiral_shrink_rate; // 아래쪽 경계 확장
+					break;
 				}
-				// left boundary check
-				else if (vertex.position.x < RectSpiral_boundary[i][0]) {
-					vertex.position.x = -1.0f;
-					move_vector.x = 0;
-					move_vector.y = movement_speed;
-					RectSpiral_boundary[i][1] -= RectSpiral_shrink_rate;
-				}
-				// top boundary check
-				if (vertex.position.y > RectSpiral_boundary[i][3]) {
-					vertex.position.y = 1.0f;
-					move_vector.y = 0;
-					move_vector.x = movement_speed;
-					RectSpiral_boundary[i][2] += RectSpiral_shrink_rate;
-				}
-				// bottom boundary check
-				else if (vertex.position.y < RectSpiral_boundary[i][2]) {
-					vertex.position.y = -1.0f;
-					move_vector.y = 0;
-					move_vector.x = -movement_speed;
-					RectSpiral_boundary[i][3] += RectSpiral_shrink_rate;
-				}
+			}
+
+			// 모든 정점 위치 업데이트
+			for (int j = models[i].index_start; j < models[i].index_start + models[i].index_count; ++j) {
+				unsigned int vertex_index = index_vec[j];
+				Vertex_glm& vertex = Vertex_glm_vec[vertex_index];
+				vertex.position += move_vector[i];
 			}
 		}
 	}
 }
 void CircleSpiralMovement() {
+	for (int i = 0; i < 4; ++i) {
+		if (models[i].is_active) {
+			if (is_shrinking[i]) {
+				circle_spiral_radius[i] -= radius_change_rate;
+				if (circle_spiral_radius[i] < 0.0f) {
+					circle_spiral_radius[i] = 0.0f;
+					is_shrinking[i] = false;
+				}
+			}
+			else {
+				circle_spiral_radius[i] += radius_change_rate;
+				if (circle_spiral_radius[i] > 0.7f) {
+					circle_spiral_radius[i] = 0.7f;
+					is_shrinking[i] = true;
+				}
+			}
 
+			glm::vec3 current_center(0.0f);
+			if (models[i].index_count > 0) {
+				for (int j = 0; j < models[i].index_count; ++j) {
+					unsigned int vertex_index = index_vec[models[i].index_start + j];
+					current_center += Vertex_glm_vec[vertex_index].position;
+				}
+				current_center /= models[i].index_count;
+			}
+
+			circle_spiral_angle[i] += angular_speeds[i];
+
+			float total_angle = circle_spiral_angle[i] + circle_spiral_angle_offset[i];
+			glm::vec3 next_center;
+			next_center.x = circle_spiral_radius[i] * cos(total_angle);
+			next_center.y = circle_spiral_radius[i] * sin(total_angle);
+			next_center.z = 0.0f;
+
+			glm::mat4 trans_to_origin = glm::translate(glm::mat4(1.0f), -current_center);
+			glm::mat4 rotate_mat = glm::rotate(glm::mat4(1.0f), angular_speeds[i], glm::vec3(0.0f, 0.0f, 1.0f));
+			glm::mat4 trans_to_next_pos = glm::translate(glm::mat4(1.0f), next_center);
+			glm::mat4 transform_matrix = trans_to_next_pos * rotate_mat * trans_to_origin;
+
+			for (int j = 0; j < models[i].index_count; ++j) {
+				unsigned int vertex_index = index_vec[models[i].index_start + j];
+				glm::vec4 position = glm::vec4(Vertex_glm_vec[vertex_index].position, 1.0f);
+				Vertex_glm_vec[vertex_index].position = glm::vec3(transform_matrix * position);
+			}
+		}
+	}
 }
 
 char* filetobuf(const char* file)
