@@ -11,7 +11,7 @@ GLuint shaderProgramID;
 GLuint vertexShader;
 GLuint fragmentShader;
 
-// Index 0 : 1»çºÐ¸é, Index 1 : 2»çºÐ¸é, Index 2 : 3»çºÐ¸é, Index 3 :4 »çºÐ¸é
+// Index 0 : 1ï¿½ï¿½Ð¸ï¿½, Index 1 : 2ï¿½ï¿½Ð¸ï¿½, Index 2 : 3ï¿½ï¿½Ð¸ï¿½, Index 3 :4 ï¿½ï¿½Ð¸ï¿½
 Shape models[4];
 
 GLuint VAO, VBO, EBO;
@@ -54,7 +54,7 @@ GLvoid drawScene() {
 
 	glBindVertexArray(VAO);
 
-	// *** ÃÖÁ¾ ¼öÁ¤: ±×¸®±â Á÷Àü¿¡ »ç¿ëÇÒ ¹öÆÛ¸¦ ¸í½ÃÀûÀ¸·Î ´Ù½Ã ¹ÙÀÎµùÇÕ´Ï´Ù. ***
+	// *** ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½: ï¿½×¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Û¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½Îµï¿½ï¿½Õ´Ï´ï¿½. ***
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
@@ -62,7 +62,7 @@ GLvoid drawScene() {
 
 	glBindVertexArray(0);
 
-	// µð¹ö±ë ·Î±×´Â ±×´ë·Î µÓ´Ï´Ù.
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Î±×´ï¿½ ï¿½×´ï¿½ï¿½ ï¿½Ó´Ï´ï¿½.
 	std::cout << "============ CURRENT STATE ============\n";
 	for (int i = 0; i < 4; ++i) {
 		if (models[i].is_active) {
@@ -108,7 +108,7 @@ void KeyBoard(unsigned char key, int x, int y) {
 	case 'c':
 		std::cout << "Clearing all triangles\n";
 		for(int i = 0; i < 4; i++) {
-			models[i] = Shape(); // ¸ðµ¨ ÃÊ±âÈ­
+			models[i] = Shape();
 		}
 		Vertex_glm_vec.clear();
 		index_vec.clear();
@@ -149,7 +149,6 @@ void MouseClick(int button, int state, int x, int y) {
 		}
 
 		if (target_shape_index != -1) {
-			// 1. ÇöÀç ¸ðµ¨µéÀÇ »óÅÂ(polygon_mode)¸¦ ÀÓ½Ã ÀúÀåÇÕ´Ï´Ù.
 			std::map<int, GLenum> old_polygon_modes;
 			for (int i = 0; i < 4; ++i) {
 				if (models[i].is_active) {
@@ -157,7 +156,6 @@ void MouseClick(int button, int state, int x, int y) {
 				}
 			}
 
-			// 2. ±âÁ¸ Á¤Á¡ Á¦°Å
 			auto it = Vertex_glm_vec.begin();
 			while (it != Vertex_glm_vec.end()) {
 				if (it->quadrant == target_shape_index) {
@@ -168,7 +166,6 @@ void MouseClick(int button, int state, int x, int y) {
 				}
 			}
 
-			// 3. »õ·Î¿î Á¤Á¡ µ¥ÀÌÅÍ »ý¼º
 			glm::vec3 origin{ ogl_x, ogl_y, 0.0f };
 			Vertex_glm v1, v2, v3;
 			float top_ver_range = urdRange(dre);
@@ -182,17 +179,14 @@ void MouseClick(int button, int state, int x, int y) {
 			v3.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 			v1.quadrant = v2.quadrant = v3.quadrant = target_shape_index;
 
-			// 4. »õ·Î¿î Á¤Á¡À» º¤ÅÍ¿¡ Ãß°¡
 			Vertex_glm_vec.push_back(v1);
 			Vertex_glm_vec.push_back(v2);
 			Vertex_glm_vec.push_back(v3);
 
-			// 5. µ¥ÀÌÅÍ¸¦ »çºÐ¸é ¼ø¼­·Î Á¤·Ä
 			std::sort(Vertex_glm_vec.begin(), Vertex_glm_vec.end(), [](const Vertex_glm& a, const Vertex_glm& b) {
 				return a.quadrant < b.quadrant;
 				});
 
-			// 6. Á¤·ÄµÈ ÃÖÁ¾ Á¤Á¡ ¸ñ·ÏÀ» ±â¹ÝÀ¸·Î ¸ðµç °ÍÀ» Àç±¸¼º
 			index_vec.clear();
 			int current_base_vertex = 0;
 			for (int i = 0; i < 4; ++i) {
@@ -208,13 +202,127 @@ void MouseClick(int button, int state, int x, int y) {
 
 				if (shape_found_in_quadrant) {
 					models[i].is_active = true;
-					// *** ÇÙ½É ¼öÁ¤: polygon_mode¸¦ ¿Ã¹Ù¸£°Ô ¼³Á¤ ***
 					if (i == target_shape_index) {
-						// »õ·Î »ý¼ºµÈ »ï°¢ÇüÀº ÇöÀç drawing_typeÀ» µû¸§
 						models[i].polygon_mode = drawing_type;
 					}
 					else {
-						// ±âÁ¸ »ï°¢ÇüÀº ÀÌÀü¿¡ ÀúÀåÇØ µÐ ¸ðµå¸¦ µû¸§
+						models[i].polygon_mode = old_polygon_modes[i];
+					}
+					models[i].base_vertex = current_base_vertex;
+					models[i].index_offset = index_vec.size() * sizeof(unsigned int);
+					models[i].index_start = index_vec.size();
+					models[i].index_count = 3;
+
+					index_vec.push_back(current_base_vertex);
+					index_vec.push_back(current_base_vertex + 1);
+					index_vec.push_back(current_base_vertex + 2);
+
+					current_base_vertex += 3;
+				}
+			}
+		}
+		else {
+			std::cout << "Error determining quadrant.\n";
+			return;
+		}
+
+		drawBatchManager.prepareDrawCalls(models);
+		UPDATE_BUFFER();
+		glutPostRedisplay();
+	}
+	else if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+		if (drawing_type == NULL) {
+			std::cout << "Please select a drawing mode first ( 'a' : Fill, 'b' : Line )\n";
+			return;
+		}
+
+		std::pair<float, float> ogl_xy = ConvertScreenToOpenGL(x, y);
+		float ogl_x{ ogl_xy.first }, ogl_y{ ogl_xy.second };
+		std::cout << "Mouse Clicked at ( " << ogl_x << ", " << ogl_y << " )\n";
+
+		int target_shape_index = -1;
+
+		if (ogl_x >= 0.0f && ogl_y >= 0.0f) {
+			target_shape_index = 0;
+		}
+		else if (ogl_x < 0.0f && ogl_y >= 0.0f) {
+			target_shape_index = 1;
+		}
+		else if (ogl_x < 0.0f && ogl_y < 0.0f) {
+			target_shape_index = 2;
+		}
+		else if (ogl_x >= 0.0f && ogl_y < 0.0f) {
+			target_shape_index = 3;
+		}
+
+		// save polygon modes
+		if (target_shape_index != -1) {
+			std::map<int, GLenum> old_polygon_modes;
+			for (int i = 0; i < 4; ++i) {
+				if (models[i].is_active) {
+					old_polygon_modes[i] = models[i].polygon_mode;
+				}
+			}
+			
+			// save old colors
+			std::vector<glm::vec3> old_color;
+			Shape& target_shape = models[target_shape_index];
+			old_color.push_back(Vertex_glm_vec[target_shape.index_start].color);
+			old_color.push_back(Vertex_glm_vec[target_shape.index_start + 1].color);
+			old_color.push_back(Vertex_glm_vec[target_shape.index_start + 2].color);
+
+			// erase vertices in the target quadrant
+			auto it = Vertex_glm_vec.begin();
+			while (it != Vertex_glm_vec.end()) {
+				if (it->quadrant == target_shape_index) {
+					it = Vertex_glm_vec.erase(it);
+				}
+				else {
+					++it;
+				}
+			}
+
+			// 3. restting the triangle
+			glm::vec3 origin{ ogl_x, ogl_y, 0.0f };
+			Vertex_glm v1, v2, v3;
+			float top_ver_range = urdRange(dre);
+			float left_bottom_range = urdRange(dre);
+			float right_bottom_range = urdRange(dre);
+			v1.position = origin + glm::vec3(0.0f, top_ver_range, 0.0f);
+			v2.position = origin + glm::vec3(-left_bottom_range, -left_bottom_range, 0.0f);
+			v3.position = origin + glm::vec3(right_bottom_range, -right_bottom_range, 0.0f);
+			v1.color = old_color[0];
+			v2.color = old_color[1];
+			v3.color = old_color[2];
+			v1.quadrant = v2.quadrant = v3.quadrant = target_shape_index;
+
+			Vertex_glm_vec.push_back(v1);
+			Vertex_glm_vec.push_back(v2);
+			Vertex_glm_vec.push_back(v3);
+
+			std::sort(Vertex_glm_vec.begin(), Vertex_glm_vec.end(), [](const Vertex_glm& a, const Vertex_glm& b) {
+				return a.quadrant < b.quadrant;
+				});
+
+			index_vec.clear();
+			int current_base_vertex = 0;
+			for (int i = 0; i < 4; ++i) {
+				models[i].is_active = false;
+
+				bool shape_found_in_quadrant = false;
+				for (const auto& vertex : Vertex_glm_vec) {
+					if (vertex.quadrant == i) {
+						shape_found_in_quadrant = true;
+						break;
+					}
+				}
+
+				if (shape_found_in_quadrant) {
+					models[i].is_active = true;
+					if (i == target_shape_index) {
+						models[i].polygon_mode = drawing_type;
+					}
+					else {
 						models[i].polygon_mode = old_polygon_modes[i];
 					}
 					models[i].base_vertex = current_base_vertex;
@@ -267,8 +375,6 @@ char* filetobuf(const char* file)
 void make_vertexShaders()
 {
 	GLchar* vertexSource;
-	//--- ¹öÅØ½º ¼¼ÀÌ´õ ÀÐ¾î ÀúÀåÇÏ°í ÄÄÆÄÀÏ ÇÏ±â
-	//--- filetobuf: »ç¿ëÀÚÁ¤ÀÇ ÇÔ¼ö·Î ÅØ½ºÆ®¸¦ ÀÐ¾î¼­ ¹®ÀÚ¿­¿¡ ÀúÀåÇÏ´Â ÇÔ¼ö
 	vertexSource = filetobuf("Vertex_Shader.glsl");
 	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexSource, NULL);
@@ -280,7 +386,7 @@ void make_vertexShaders()
 	if (!result)
 	{
 		glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
-		std::cerr << "ERROR: vertex shader ÄÄÆÄÀÏ ½ÇÆÐ\n" << errorLog << std::endl;
+		std::cerr << "ERROR: vertex shader Compile Failed\n" << errorLog << std::endl;
 		return;
 	}
 }
@@ -289,8 +395,7 @@ void make_vertexShaders()
 void make_fragmentShaders()
 {
 	GLchar* fragmentSource;
-	//--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ ÀÐ¾î ÀúÀåÇÏ°í ÄÄÆÄÀÏÇÏ±â
-	fragmentSource = filetobuf("Fragment_Shader.glsl");	// ÇÁ·¡±×¼¼ÀÌ´õ ÀÐ¾î¿À±â
+	fragmentSource = filetobuf("Fragment_Shader.glsl");
 	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
 	glCompileShader(fragmentShader);
@@ -301,7 +406,7 @@ void make_fragmentShaders()
 	if (!result)
 	{
 		glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
-		std::cerr << "ERROR: frag_shader ÄÄÆÄÀÏ ½ÇÆÐ\n" << errorLog << std::endl;
+		std::cerr << "ERROR: frag_shader Compile Failed\n" << errorLog << std::endl;
 		return;
 	}
 }
@@ -311,22 +416,18 @@ GLuint make_shaderProgram()
 	GLint result;
 	GLchar* errorLog = NULL;
 	GLuint shaderID;
-	shaderID = glCreateProgram();					//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸¸µé±â
-	glAttachShader(shaderID, vertexShader);			//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥¿¡ ¹öÅØ½º ¼¼ÀÌ´õ ºÙÀÌ±â
-	glAttachShader(shaderID, fragmentShader);		//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥¿¡ ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ ºÙÀÌ±â
-	glLinkProgram(shaderID);						//--- ¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸µÅ©ÇÏ±â
-	glDeleteShader(vertexShader);					//--- ¼¼ÀÌ´õ °´Ã¼¸¦ ¼¼ÀÌ´õ ÇÁ·Î±×·¥¿¡ ¸µÅ©ÇßÀ½À¸·Î, ¼¼ÀÌ´õ °´Ã¼ ÀÚÃ¼´Â »èÁ¦ °¡´É
+	shaderID = glCreateProgram();
+	glAttachShader(shaderID, vertexShader);
+	glAttachShader(shaderID, fragmentShader);
+	glLinkProgram(shaderID);
+	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
-	glGetProgramiv(shaderID, GL_LINK_STATUS, &result); // ---¼¼ÀÌ´õ°¡ Àß ¿¬°áµÇ¾ú´ÂÁö Ã¼Å©ÇÏ±â
+	glGetProgramiv(shaderID, GL_LINK_STATUS, &result);
 	if (!result) {
 		glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
-		std::cerr << "ERROR: shader program ¿¬°á ½ÇÆÐ\n" << errorLog << std::endl;
+		std::cerr << "ERROR: shader program Compile Failed\n" << errorLog << std::endl;
 		return false;
 	}
-	//glUseProgram(shaderID);							//--- ¸¸µé¾îÁø ¼¼ÀÌ´õ ÇÁ·Î±×·¥ »ç¿ëÇÏ±â
-	//--- ¿©·¯ °³ÀÇ ¼¼ÀÌ´õÇÁ·Î±×·¥ ¸¸µé ¼ö ÀÖ°í, ±× Áß ÇÑ°³ÀÇ ÇÁ·Î±×·¥À» »ç¿ëÇÏ·Á¸é
-	//--- glUseProgram ÇÔ¼ö¸¦ È£ÃâÇÏ¿© »ç¿ë ÇÒ Æ¯Á¤ ÇÁ·Î±×·¥À» ÁöÁ¤ÇÑ´Ù.
-	//--- »ç¿ëÇÏ±â Á÷Àü¿¡ È£ÃâÇÒ ¼ö ÀÖ´Ù.
 	return shaderID;
 }
 
@@ -348,7 +449,6 @@ void Make_Triangle(Shape& shape, float ogl_x, float ogl_y, int quardrant) {
 
 	v1.quadrant = quardrant; v2.quadrant = quardrant; v3.quadrant = quardrant;
 
-	// µð¹ö±ë Á¤º¸
 	std::cout << "Triangle vertex positions:\n";
 	std::cout << "  v1: (" << v1.position.x << ", " << v1.position.y << ", " << v1.position.z << ")\n";
 	std::cout << "  v2: (" << v2.position.x << ", " << v2.position.y << ", " << v2.position.z << ")\n";
@@ -364,7 +464,6 @@ void Make_Triangle(Shape& shape, float ogl_x, float ogl_y, int quardrant) {
 	Vertex_glm_vec.push_back(v2);	
 	Vertex_glm_vec.push_back(v3);
 	
-	// ÇöÀç Á¤Á¡ ÀÎµ¦½º¸¦ ±â¹ÝÀ¸·Î ¿Ã¹Ù¸¥ ÀÎµ¦½º °è»ê
 	unsigned int base_index = static_cast<unsigned int>(shape.base_vertex);
 	shape.index_start = index_vec.size();
 	index_vec.push_back(base_index); 

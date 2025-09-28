@@ -28,7 +28,6 @@ struct Shape {
     GLenum polygon_mode;
     GLsizei index_count;
     GLint base_vertex;
-    // *** 최종 수정: GLsizei 대신 size_t 사용 ***
     size_t index_offset;
     GLint index_start;
     bool is_active;
@@ -41,7 +40,6 @@ class DrawBatchManager {
 private:
     struct DrawCallParameters {
         std::vector<GLsizei> counts;
-        // *** 최종 수정: 일관성을 위해 size_t 사용 (이미 수정됨) ***
         std::vector<size_t> indices_offsets;
         std::vector<GLint> basevertices;
         GLsizei draw_count = 0;

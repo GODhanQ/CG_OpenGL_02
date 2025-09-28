@@ -33,7 +33,6 @@ void DrawBatchManager::prepareDrawCalls(const Shape* all_models) {
 
 		if (selected_batch) {
 			selected_batch->counts.push_back(model.index_count);
-			// *** 최종 수정: index_offset 값을 그대로 size_t 벡터에 저장 ***
 			selected_batch->indices_offsets.push_back(model.index_offset);
 			selected_batch->basevertices.push_back(model.base_vertex);
 			selected_batch->draw_count++;
@@ -42,31 +41,25 @@ void DrawBatchManager::prepareDrawCalls(const Shape* all_models) {
 }
 
 void DrawBatchManager::drawAll() {
-	// FILL 모드로 그려야 할 삼각형들
 	if (fill_triangles_batch.draw_count > 0) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		for (int i = 0; i < fill_triangles_batch.draw_count; ++i) {
-			// *** 최종 수정: glDrawElements 사용 ***
 			glDrawElements(
 				GL_TRIANGLES,
 				fill_triangles_batch.counts[i],
 				GL_UNSIGNED_INT,
-				// EBO 내의 바이트 오프셋
 				(const void*)(fill_triangles_batch.indices_offsets[i])
 			);
 		}
 	}
 
-	// LINE 모드로 그려야 할 삼각형들
 	if (line_triangles_batch.draw_count > 0) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		for (int i = 0; i < line_triangles_batch.draw_count; ++i) {
-			// *** 최종 수정: glDrawElements 사용 ***
 			glDrawElements(
 				GL_TRIANGLES,
 				line_triangles_batch.counts[i],
 				GL_UNSIGNED_INT,
-				// EBO 내의 바이트 오프셋
 				(const void*)(line_triangles_batch.indices_offsets[i])
 			);
 		}
