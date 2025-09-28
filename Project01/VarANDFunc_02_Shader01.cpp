@@ -1,6 +1,3 @@
-#ifndef VARANDFUNC_02_SHADER01_H
-#endif VARANDFUNC_02_SHADER01_H
-
 #define _CRT_SECURE_NO_WARNINGS
 #include "VarANDFunc_02_Shader01.h"
 

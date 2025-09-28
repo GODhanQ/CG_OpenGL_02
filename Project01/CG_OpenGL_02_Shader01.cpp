@@ -382,7 +382,6 @@ char* filetobuf(const char* file)
 	buf[length] = 0;								// Null terminator
 	return buf;										// Return the buffer
 }
-
 void make_vertexShaders()
 {
 	GLchar* vertexSource;
@@ -402,8 +401,6 @@ void make_vertexShaders()
 		return;
 	}
 }
-
-
 void make_fragmentShaders()
 {
 	GLchar* fragmentSource;
@@ -422,7 +419,6 @@ void make_fragmentShaders()
 		return;
 	}
 }
-
 GLuint make_shaderProgram()
 {
 	GLint result;
@@ -470,7 +466,6 @@ void INIT_BUFFER()
 
 	glBindVertexArray(0);
 }
-
 void UPDATE_BUFFER()
 {
 	if (Vertex_glm_vec.empty() || index_vec.empty()) return;
@@ -517,8 +512,6 @@ void CreatePointAtOrigin(float ogl_x, float ogl_y) {
 
 	std::cout << "Created Point at (" << x1 << ", " << y1 << ")\n";
 }
-
-
 void AddVertexToLineStrip(float ogl_x, float ogl_y) {
 	Vertex_glm v;
 	v.position = glm::vec3(ogl_x, ogl_y, 0.0f);
@@ -585,7 +578,6 @@ void CreateTriangleAtOrigin(float ogl_x, float ogl_y) {
 
 	std::cout << "Created Triangle at (" << x1 << ", " << y1 << "), (" << x2 << ", " << y2 << "), (" << x3 << ", " << y3 << ")\n";
 }
-
 void CreateSquareAtOrigin(float ogl_x, float ogl_y) {
 	// now create a new origin and make a square from origin with random color
 	Vertex_glm v1, v2, v3, v4;
