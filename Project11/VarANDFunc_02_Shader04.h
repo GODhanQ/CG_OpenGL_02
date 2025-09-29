@@ -1,0 +1,71 @@
+#pragma once
+#include <GL/glew.h>
+#include <gl/freeglut.h>
+#include <gl/freeglut_ext.h>
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <stdlib.h>
+#include <stdio.h>
+#include <iostream>
+#include <vector>
+#include <deque>
+#include <tuple>
+#include <random>
+#include <chrono>
+#include <algorithm>
+#include <map>
+#define NOMINMAX
+#include <windows.h>
+
+struct Vertex_glm {
+    // 공통
+    glm::vec3 initial_center; // 최초 클릭 위치
+    glm::vec3 color;
+    float state; // 0.0: 확장, 1.0: 수축
+
+    // 확장 상태용
+    float expand_angle;
+    float expand_radius;
+
+    // 수축 상태용
+    glm::vec3 stop_position; // 팽창이 멈춘 위치
+    glm::vec3 shrink_center; // 수축 중심 위치
+    float shrink_progress; // 수축 진행률 (0.0 -> 1.0)
+    float shrink_initial_radius; // 수축 나선의 최대 크기
+};
+
+// 나선 정보를 관리하는 구조체
+struct Spiral {
+    glm::vec3 center;
+    glm::vec3 color;
+    bool generation_complete;
+    std::vector<Vertex_glm> vertices;
+};
+
+extern GLint Window_width, Window_height;
+
+extern int Rotation_Num, Spin_Speed;
+extern float Radius_change_Speed;
+extern float Max_Angle;
+extern float time_by_sec;
+extern float rotate_speed;
+
+extern GLfloat bgColorR, bgColorG, bgColorB;
+extern GLenum drawing_type;
+
+
+GLvoid drawScene();
+GLvoid Reshape(int w, int h);
+
+void KeyBoard(unsigned char key, int x, int y);
+void MouseClick(int button, int state, int x, int y);
+std::pair<float, float> ConvertScreenToOpenGL(int screen_x, int screen_y);
+
+void INIT_BUFFER();
+void UPDATE_BUFFER(const std::vector<Vertex_glm>& all_vertices, const std::vector<unsigned int>& all_indices);
+
+char* filetobuf(const char* file);
+void make_vertexShaders();
+void make_fragmentShaders();
+GLuint make_shaderProgram();
