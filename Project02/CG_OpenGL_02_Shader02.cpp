@@ -13,9 +13,15 @@ GLuint fragmentShader;
 
 // Index 0 : 1��и�, Index 1 : 2��и�, Index 2 : 3��и�, Index 3 :4 ��и�
 Shape models[4];
+Shape axis_model[2];
 
+GLuint VAO_axis, VBO_axis, EBO_axis;
 GLuint VAO, VBO, EBO;
 DrawBatchManager drawBatchManager;
+DrawAxisBatchManager drawAxisBatchManager;
+
+std::vector<Vertex_glm> Axis_glm_vec;
+std::vector<unsigned int> Axis_index_vec;
 
 std::vector<Vertex_glm> Vertex_glm_vec;
 std::vector<unsigned int> index_vec;
@@ -51,6 +57,10 @@ GLvoid drawScene() {
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glUseProgram(shaderProgramID);
+
+	glBindVertexArray(VAO_axis);
+	drawAxisBatchManager.drawAll();
+	glBindVertexArray(0);
 
 	glBindVertexArray(VAO);
 
@@ -168,12 +178,16 @@ void MouseClick(int button, int state, int x, int y) {
 
 			glm::vec3 origin{ ogl_x, ogl_y, 0.0f };
 			Vertex_glm v1, v2, v3;
-			float top_ver_range = urdRange(dre);
+			
+			float triangle_range = urdRange(dre);
+			
+
+			/*float top_ver_range = urdRange(dre);
 			float left_bottom_range = urdRange(dre);
-			float right_bottom_range = urdRange(dre);
-			v1.position = origin + glm::vec3(0.0f, top_ver_range, 0.0f);
-			v2.position = origin + glm::vec3(-left_bottom_range, -left_bottom_range, 0.0f);
-			v3.position = origin + glm::vec3(right_bottom_range, -right_bottom_range, 0.0f);
+			float right_bottom_range = urdRange(dre);*/
+			v1.position = origin + glm::vec3(0.0f, 2.0 * triangle_range, 0.0f);
+			v2.position = origin + glm::vec3(-triangle_range, -triangle_range, 0.0f);
+			v3.position = origin + glm::vec3(triangle_range, -triangle_range, 0.0f);
 			v1.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 			v2.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 			v3.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
@@ -285,12 +299,14 @@ void MouseClick(int button, int state, int x, int y) {
 			// 3. restting the triangle
 			glm::vec3 origin{ ogl_x, ogl_y, 0.0f };
 			Vertex_glm v1, v2, v3;
-			float top_ver_range = urdRange(dre);
+
+			float triangle_range = urdRange(dre);
+			/*float top_ver_range = urdRange(dre);
 			float left_bottom_range = urdRange(dre);
-			float right_bottom_range = urdRange(dre);
-			v1.position = origin + glm::vec3(0.0f, top_ver_range, 0.0f);
-			v2.position = origin + glm::vec3(-left_bottom_range, -left_bottom_range, 0.0f);
-			v3.position = origin + glm::vec3(right_bottom_range, -right_bottom_range, 0.0f);
+			float right_bottom_range = urdRange(dre);*/
+			v1.position = origin + glm::vec3(0.0f, triangle_range, 0.0f);
+			v2.position = origin + glm::vec3(-triangle_range, -triangle_range, 0.0f);
+			v3.position = origin + glm::vec3(triangle_range, -triangle_range, 0.0f);
 			v1.color = old_color[0];
 			v2.color = old_color[1];
 			v3.color = old_color[2];
@@ -435,13 +451,14 @@ void Make_Triangle(Shape& shape, float ogl_x, float ogl_y, int quardrant) {
 	glm::vec3 origin{ ogl_x, ogl_y, 0.0f };
 	Vertex_glm v1, v2, v3;
 
-	float top_ver_range = urdRange(dre);
+	float triangle_range = urdRange(dre);
+	/*float top_ver_range = urdRange(dre);
 	float left_bottom_range = urdRange(dre);
-	float right_bottom_range = urdRange(dre);
+	float right_bottom_range = urdRange(dre);*/
 
-	v1.position = origin + glm::vec3(0.0f, top_ver_range, 0.0f);
-	v2.position = origin + glm::vec3(-left_bottom_range, -left_bottom_range, 0.0f);
-	v3.position = origin + glm::vec3(right_bottom_range, -right_bottom_range, 0.0f);
+	v1.position = origin + glm::vec3(0.0f, triangle_range, 0.0f);
+	v2.position = origin + glm::vec3(-triangle_range, -triangle_range, 0.0f);
+	v3.position = origin + glm::vec3(triangle_range, -triangle_range, 0.0f);
 	
 	v1.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
 	v2.color = glm::vec3(urd_0_1(dre), urd_0_1(dre), urd_0_1(dre));
@@ -481,6 +498,63 @@ void Make_Triangle(Shape& shape, float ogl_x, float ogl_y, int quardrant) {
 void INIT_BUFFER()
 {
 	std::cout << "Initializing VAO, EBO \n";
+	float axis_color1 = urd_0_1(dre), axis_color2 = urd_0_1(dre);
+	float axis_vertex[] = {
+		// X axis
+		-1.0f, 0.0f, 0.0f,	axis_color1, axis_color2, axis_color1,
+		 1.0f, 0.0f, 0.0f,	axis_color1, axis_color2, axis_color1,
+		 // Y axis
+		  0.0f,-1.0f, 0.0f,	axis_color2, axis_color1, axis_color2,
+		  0.0f, 1.0f, 0.0f,	axis_color2, axis_color1, axis_color2
+	};
+	unsigned int axis_index[] = {
+		0, 1,
+		2, 3
+	};
+	for (int i = 0; i < 4; ++i) {
+		Vertex_glm v;
+		v.position = glm::vec3(axis_vertex[i * 6], axis_vertex[i * 6 + 1], axis_vertex[i * 6 + 2]);
+		v.color = glm::vec3(axis_vertex[i * 6 + 3], axis_vertex[i * 6 + 4], axis_vertex[i * 6 + 5]);
+		v.quadrant = -1;
+		Axis_glm_vec.push_back(v);
+	}
+	for (int i = 0; i < 4; ++i) {
+		Axis_index_vec.push_back(axis_index[i]);
+	}
+
+	for (int i = 0; i < 2; ++i) {
+		axis_model[i].draw_mode = GL_LINES;
+		axis_model[i].polygon_mode = GL_LINE;
+		axis_model[i].index_count = 2;
+		axis_model[i].base_vertex = i * 2;
+		axis_model[i].index_offset = i * 2 * sizeof(unsigned int);
+		axis_model[i].index_start = i * 2;
+		axis_model[i].is_active = true;
+	}
+
+	glGenVertexArrays(1, &VAO_axis);
+	glGenBuffers(1, &VBO_axis);
+	glGenBuffers(1, &EBO_axis);
+
+	glBindVertexArray(VAO_axis);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_axis);
+	glBufferData(GL_ARRAY_BUFFER, Axis_glm_vec.size() * sizeof(Vertex_glm), Axis_glm_vec.data(), GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, position));
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, color));
+	glEnableVertexAttribArray(1);
+	glVertexAttribIPointer(2, 1, GL_INT, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, quadrant));
+	glEnableVertexAttribArray(2);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_axis);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, Axis_index_vec.size() * sizeof(unsigned int), Axis_index_vec.data(), GL_STATIC_DRAW);
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	drawAxisBatchManager.prepareDrawCalls(axis_model);
+	// --------------------------------------------------------
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 	glGenBuffers(1, &EBO);

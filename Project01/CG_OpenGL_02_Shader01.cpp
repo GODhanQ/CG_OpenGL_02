@@ -60,7 +60,7 @@ GLvoid drawScene() {
 
 	glUseProgram(shaderProgramID);
 
-	// 모든 그리기를 시작하기 전에 Picking 및 Override 모드를 비활성화
+	// 모든 그리기�? ?�작?�기 ?�에 Picking �?Override 모드�?비활?�화
 	glUniform1i(glGetUniformLocation(shaderProgramID, "u_IsPicking"), GL_FALSE);
 	glUniform1i(glGetUniformLocation(shaderProgramID, "u_UseOverrideColor"), GL_FALSE);
 
@@ -78,19 +78,19 @@ GLvoid drawScene() {
 		drawBatchManager.drawAll();
 	}
 
-	// 선택된 객체가 있다면, 그 위에 하이라이트(외곽선)를 덧그림
+	// ?�택??객체가 ?�다�? �??�에 ?�이?�이???�곽??�??�그�?
 	if (selected_model_index != -1 && selected_model_index < Model_vec.size()) {
 		Shape& selected_shape = Model_vec[selected_model_index];
 
-		// 하이라이트 모드 활성화
+		// ?�이?�이??모드 ?�성??
 		GLint useOverrideLoc = glGetUniformLocation(shaderProgramID, "u_UseOverrideColor");
 		GLint overrideColorLoc = glGetUniformLocation(shaderProgramID, "u_OverrideColor");
 		glUniform1i(useOverrideLoc, GL_TRUE);
-		glUniform3f(overrideColorLoc, 1.0f, 1.0f, 0.0f); // 노란색으로 설정
+		glUniform3f(overrideColorLoc, 1.0f, 1.0f, 0.0f); // ?��??�으�??�정
 
-		// 외곽선을 그리기 위해 폴리곤 모드 변경
+		// ?�곽?�을 그리�??�해 ?�리�?모드 변�?
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glLineWidth(3.0); // 외곽선 두께
+		glLineWidth(3.0); // ?�곽???�께
 
 		glBindVertexArray(VAO);
 		glDrawElementsBaseVertex(
@@ -101,7 +101,7 @@ GLvoid drawScene() {
 			selected_shape.base_vertex
 		);
 
-		// 원래 렌더링 상태로 복구
+
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glUniform1i(useOverrideLoc, GL_FALSE);
 	}
@@ -114,14 +114,13 @@ GLvoid Reshape(int w, int h) {
 }
 
 void Keyboard(unsigned char key, int x, int y) {
-	// 모드 변경 시, 진행 중이던 라인 스트립 그리기를 종료
-	if (key != 'l') { // 'l' 키를 누른 게 아니라면 라인 그리기 상태 초기화
+	if (key != 'l') {
 		active_line_strip_model_index = -1;
 	}
 
 	switch (key) {
 	case 'p':
-		if (DrawLine_mode) { // 라인 모드가 켜져 있으면 다른 모드 선택 불가
+		if (DrawLine_mode) {
 			std::cout << "Please deactivate Line Drawing Mode ('l') first.\n";
 			break;
 		}
@@ -142,7 +141,7 @@ void Keyboard(unsigned char key, int x, int y) {
 			break;
 		}
 		DrawLine_mode = !DrawLine_mode;
-		// 라인 모드가 꺼지면 그리던 선을 확정
+
 		if (!DrawLine_mode) {
 			active_line_strip_model_index = -1;
 		}
@@ -153,7 +152,7 @@ void Keyboard(unsigned char key, int x, int y) {
 		ChangeConsoleColor(COLOR_DEFAULT);
 		break;
 	case 't':
-		if (DrawLine_mode) { // 라인 모드가 켜져 있으면 다른 모드 선택 불가
+		if (DrawLine_mode) {
 			std::cout << "Please deactivate Line Drawing Mode ('l') first.\n";
 			break;
 		}
@@ -169,7 +168,7 @@ void Keyboard(unsigned char key, int x, int y) {
 		ChangeConsoleColor(COLOR_DEFAULT);
 		break;
 	case 'r':
-		if (DrawLine_mode) { // 라인 모드가 켜져 있으면 다른 모드 선택 불가
+		if (DrawLine_mode) { // ?�인 모드가 켜져 ?�으�??�른 모드 ?�택 불�?
 			std::cout << "Please deactivate Line Drawing Mode ('l') first.\n";
 			break;
 		}
@@ -184,7 +183,7 @@ void Keyboard(unsigned char key, int x, int y) {
 		std::cout << (DrawSquare_mode ? " On" : " Off") << '\n';
 		ChangeConsoleColor(COLOR_DEFAULT);
 		break;
-	case 's': // 객체 선택 모드 토글 키
+	case 's': // 객체 ?�택 모드 ?��? ??
 		is_picking_mode = !is_picking_mode;
 		if (is_picking_mode) {
 			std::cout << "Picking Mode:";
@@ -193,19 +192,19 @@ void Keyboard(unsigned char key, int x, int y) {
 			ChangeConsoleColor(COLOR_DEFAULT);
 			std::cout << "Click to select an object.\n";
 
-			// 다른 모든 그리기 모드 비활성화
+			// ?�른 모든 그리�?모드 비활?�화
 			DrawPoint_mode = DrawLine_mode = DrawTriangle_mode = DrawSquare_mode = false;
 			active_line_strip_model_index = -1;
-			selected_model_index = -1; // 선택 모드 진입 시 기존 선택 해제
+			selected_model_index = -1; // ?�택 모드 진입 ??기존 ?�택 ?�제
 		}
 		else {
 			std::cout << "Picking Mode:";
 			ChangeConsoleColor(COLOR_YELLOW);
 			std::cout << " OFF.\n";
 			ChangeConsoleColor(COLOR_DEFAULT);
-			selected_model_index = -1; // 선택 해제
+			selected_model_index = -1; // ?�택 ?�제
 		}
-		glutPostRedisplay(); // 화면 갱신하여 하이라이트 제거
+		glutPostRedisplay(); // ?�면 갱신?�여 ?�이?�이???�거
 		break;
 	case 'c':
 		Vertex_glm_vec.clear();
@@ -314,11 +313,11 @@ void MouseClick(int button, int state, int x, int y) {
 				std::cout << ((is_picking_mode) ? " ON." : " OFF.") << '\n';
 				ChangeConsoleColor(COLOR_DEFAULT);
 			}
-			glutPostRedisplay(); // 선택 결과를 화면에 반영
+			glutPostRedisplay(); // ?�택 결과�??�면??반영
 			return;
 		}
 
-		if (Current_Diagram_Count >= 10 && active_line_strip_model_index == -1) { // 새 도형을 만들 때만 개수 체크
+		if (Current_Diagram_Count >= 10 && active_line_strip_model_index == -1) { // ???�형??만들 ?�만 개수 체크
 			std::cout << "Maximum number of Diagram reached (10). Cannot add more.\n";
 			return;
 		}
@@ -328,18 +327,18 @@ void MouseClick(int button, int state, int x, int y) {
 		std::cout << "Mouse Clicked at ( " << ogl_x << ", " << ogl_y << " )\n";
 
 		if (DrawPoint_mode) {
-			active_line_strip_model_index = -1; // 다른 모드를 클릭하면 라인 그리기 종료
+			active_line_strip_model_index = -1; // ?�른 모드�??�릭?�면 ?�인 그리�?종료
 			CreatePointAtOrigin(ogl_x, ogl_y);
 		}
 		else if (DrawLine_mode) {
 			AddVertexToLineStrip(ogl_x, ogl_y);
 		}
 		else if (DrawTriangle_mode) {
-			active_line_strip_model_index = -1; // 다른 모드를 클릭하면 라인 그리기 종료
+			active_line_strip_model_index = -1; // ?�른 모드�??�릭?�면 ?�인 그리�?종료
 			CreateTriangleAtOrigin(ogl_x, ogl_y);
 		}
 		else if (DrawSquare_mode) {
-			active_line_strip_model_index = -1; // 다른 모드를 클릭하면 라인 그리기 종료
+			active_line_strip_model_index = -1; // ?�른 모드�??�릭?�면 ?�인 그리�?종료
 			CreateSquareAtOrigin(ogl_x, ogl_y);
 		}
 		else {
@@ -362,8 +361,8 @@ std::pair<float, float> ConvertMouseWxy2GLxy(int x, int y) {
 	return { ogl_x, ogl_y };
 }
 
-// uniform 변수는 무조건 할당받기
-// 정점 위치 바뀌면 버퍼에 다시 보내주기
+// uniform 변?�는 무조�??�당받기
+// ?�점 ?�치 바뀌면 버퍼???�시 보내주기
 
 char* filetobuf(const char* file)
 {
@@ -385,8 +384,8 @@ char* filetobuf(const char* file)
 void make_vertexShaders()
 {
 	GLchar* vertexSource;
-	//--- 버텍스 세이더 읽어 저장하고 컴파일 하기
-	//--- filetobuf: 사용자정의 함수로 텍스트를 읽어서 문자열에 저장하는 함수
+	//--- 버텍???�이???�어 ?�?�하�?컴파???�기
+	//--- filetobuf: ?�용?�정???�수�??�스?��? ?�어??문자?�에 ?�?�하???�수
 	vertexSource = filetobuf("Vertex.glsl");
 	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexSource, NULL);
@@ -397,15 +396,15 @@ void make_vertexShaders()
 	if (!result)
 	{
 		glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
-		std::cerr << "ERROR: vertex shader 컴파일 실패\n" << errorLog << std::endl;
+		std::cerr << "ERROR: vertex shader 컴파???�패\n" << errorLog << std::endl;
 		return;
 	}
 }
 void make_fragmentShaders()
 {
 	GLchar* fragmentSource;
-	//--- 프래그먼트 세이더 읽어 저장하고 컴파일하기
-	fragmentSource = filetobuf("Fragment.glsl");	// 프래그세이더 읽어오기
+	//--- ?�래그먼???�이???�어 ?�?�하�?컴파?�하�?
+	fragmentSource = filetobuf("Fragment.glsl");	// ?�래그세?�더 ?�어?�기
 	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
 	glCompileShader(fragmentShader);
@@ -415,7 +414,7 @@ void make_fragmentShaders()
 	if (!result)
 	{
 		glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
-		std::cerr << "ERROR: frag_shader 컴파일 실패\n" << errorLog << std::endl;
+		std::cerr << "ERROR: frag_shader 컴파???�패\n" << errorLog << std::endl;
 		return;
 	}
 }
@@ -424,22 +423,22 @@ GLuint make_shaderProgram()
 	GLint result;
 	GLchar* errorLog = NULL;
 	GLuint shaderID;
-	shaderID = glCreateProgram();					//--- 세이더 프로그램 만들기
-	glAttachShader(shaderID, vertexShader);			//--- 세이더 프로그램에 버텍스 세이더 붙이기
-	glAttachShader(shaderID, fragmentShader);		//--- 세이더 프로그램에 프래그먼트 세이더 붙이기
-	glLinkProgram(shaderID);						//--- 세이더 프로그램 링크하기
-	glDeleteShader(vertexShader);					//--- 세이더 객체를 세이더 프로그램에 링크했음으로, 세이더 객체 자체는 삭제 가능
+	shaderID = glCreateProgram();					//--- ?�이???�로그램 만들�?
+	glAttachShader(shaderID, vertexShader);			//--- ?�이???�로그램??버텍???�이??붙이�?
+	glAttachShader(shaderID, fragmentShader);		//--- ?�이???�로그램???�래그먼???�이??붙이�?
+	glLinkProgram(shaderID);						//--- ?�이???�로그램 링크?�기
+	glDeleteShader(vertexShader);					//--- ?�이??객체�??�이???�로그램??링크?�음?�로, ?�이??객체 ?�체????�� 가??
 	glDeleteShader(fragmentShader);
-	glGetProgramiv(shaderID, GL_LINK_STATUS, &result); // ---세이더가 잘 연결되었는지 체크하기
+	glGetProgramiv(shaderID, GL_LINK_STATUS, &result); // ---?�이?��? ???�결?�었?��? 체크?�기
 	if (!result) {
 		glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
-		std::cerr << "ERROR: shader program 연결 실패\n" << errorLog << std::endl;
+		std::cerr << "ERROR: shader program ?�결 ?�패\n" << errorLog << std::endl;
 		return false;
 	}
-	//glUseProgram(shaderID);							//--- 만들어진 세이더 프로그램 사용하기
-	//--- 여러 개의 세이더프로그램 만들 수 있고, 그 중 한개의 프로그램을 사용하려면
-	//--- glUseProgram 함수를 호출하여 사용 할 특정 프로그램을 지정한다.
-	//--- 사용하기 직전에 호출할 수 있다.
+	//glUseProgram(shaderID);							//--- 만들?�진 ?�이???�로그램 ?�용?�기
+	//--- ?�러 개의 ?�이?�프로그??만들 ???�고, �?�??�개???�로그램???�용?�려�?
+	//--- glUseProgram ?�수�??�출?�여 ?�용 ???�정 ?�로그램??지?�한??
+	//--- ?�용?�기 직전???�출?????�다.
 	return shaderID;
 }
 
@@ -481,7 +480,7 @@ void UPDATE_BUFFER()
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_vec.size() * sizeof(unsigned int), index_vec.data(), GL_DYNAMIC_DRAW);
 	std::cout << "Rebinding EBO with size: " << index_vec.size() * sizeof(unsigned int) << " Count of Index : " << index_vec.size() << "\n";
 
-	// 버퍼 바인딩 해제
+	// 버퍼 바인???�제
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -520,15 +519,15 @@ void AddVertexToLineStrip(float ogl_x, float ogl_y) {
 	if (active_line_strip_model_index == -1) {
 		Shape shape;
 		shape.draw_mode = GL_LINE_STRIP;
-		shape.index_count = 1; // 시작은 정점 1개
+		shape.index_count = 1; // ?�작?� ?�점 1�?
 		shape.base_vertex = Vertex_glm_vec.size();
 		shape.index_offset = index_vec.size() * sizeof(unsigned int);
 
 		Vertex_glm_vec.push_back(v);
-		index_vec.push_back(0); // 로컬 인덱스 0
+		index_vec.push_back(0); // 로컬 ?�덱??0
 
 		Model_vec.push_back(shape);
-		active_line_strip_model_index = Model_vec.size() - 1; // 새로 만든 Shape의 인덱스 저장
+		active_line_strip_model_index = Model_vec.size() - 1; // ?�로 만든 Shape???�덱???�??
 		Current_Diagram_Count++;
 		std::cout << "Started a new Line Strip.\n";
 	}
@@ -623,14 +622,14 @@ void CreateSquareAtOrigin(float ogl_x, float ogl_y) {
 }
 
 int PickObject(int x, int y) {
-	// Picking 렌더링 패스
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // 배경을 0 (ID 0)으로 설정
+	// Picking ?�더�??�스
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // 배경??0 (ID 0)?�로 ?�정
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glUseProgram(shaderProgramID);
 	glBindVertexArray(VAO);
 
-	// Picking 모드 활성화
+	// Picking 모드 ?�성??
 	GLint isPickingLoc = glGetUniformLocation(shaderProgramID, "u_IsPicking");
 	GLint pickingColorLoc = glGetUniformLocation(shaderProgramID, "u_PickingColor");
 	glUniform1i(isPickingLoc, GL_TRUE);
@@ -638,7 +637,7 @@ int PickObject(int x, int y) {
 	for (int i = 0; i < Model_vec.size(); ++i) {
 		Shape& shape = Model_vec[i];
 
-		// 객체 인덱스(i+1)를 R, G, B 색상으로 변환
+		// 객체 ?�덱??i+1)�?R, G, B ?�상?�로 변??
 		int r = (i + 1) & 0xFF;
 		int g = ((i + 1) >> 8) & 0xFF;
 		int b = ((i + 1) >> 16) & 0xFF;
@@ -656,15 +655,15 @@ int PickObject(int x, int y) {
 	glFlush();
 	glFinish();
 
-	// 마우스 위치의 픽셀 색상 읽기
+	// 마우???�치???��? ?�상 ?�기
 	unsigned char pixel[4];
 	int inverted_y = glutGet(GLUT_WINDOW_HEIGHT) - y;
 	glReadPixels(x, inverted_y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
 
-	// 읽은 색상을 다시 객체 인덱스로 변환
+	// ?��? ?�상???�시 객체 ?�덱?�로 변??
 	int pickedID = pixel[0] + (pixel[1] << 8) + (pixel[2] << 16);
 
-	// Picking 모드 비활성화
+	// Picking 모드 비활?�화
 	glUniform1i(isPickingLoc, GL_FALSE);
 
 	if (pickedID == 0 || pickedID > Model_vec.size()) {

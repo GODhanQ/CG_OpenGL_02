@@ -37,7 +37,6 @@ struct Shape {
 };
 
 class DrawBatchManager {
-private:
     struct DrawCallParameters {
         std::vector<GLsizei> counts;
         std::vector<size_t> indices_offsets;
@@ -51,6 +50,20 @@ private:
 public:
     void prepareDrawCalls(const Shape* all_models);
     void drawAll();
+};
+
+class DrawAxisBatchManager {
+	struct DrawCallParameters {
+		std::vector<GLsizei> counts;
+		std::vector<size_t> indices_offsets;
+		std::vector<GLint> basevertices;
+		GLsizei draw_count = 0;
+	};
+	DrawCallParameters axis_lines_batch;
+
+public:
+	void prepareDrawCalls(const Shape* all_models);
+	void drawAll();
 };
 
 extern GLint Window_width, Window_height;
