@@ -19,23 +19,19 @@
 #include <windows.h>
 
 struct Vertex_glm {
-    // 공통
-    glm::vec3 initial_center; // 최초 클릭 위치
+    glm::vec3 initial_center;
     glm::vec3 color;
-    float state; // 0.0: 확장, 1.0: 수축
+    float state;
 
-    // 확장 상태용
     float expand_angle;
     float expand_radius;
 
-    // 수축 상태용
-    glm::vec3 stop_position; // 팽창이 멈춘 위치
-    glm::vec3 shrink_center; // 수축 중심 위치
-    float shrink_progress; // 수축 진행률 (0.0 -> 1.0)
-    float shrink_initial_radius; // 수축 나선의 최대 크기
+    glm::vec3 stop_position; 
+    glm::vec3 shrink_center;
+    float shrink_progress;
+    float shrink_initial_radius;
 };
 
-// 나선 정보를 관리하는 구조체
 struct Spiral {
     glm::vec3 center;
     glm::vec3 color;
@@ -69,3 +65,5 @@ char* filetobuf(const char* file);
 void make_vertexShaders();
 void make_fragmentShaders();
 GLuint make_shaderProgram();
+
+void CreateSpiralAt(glm::vec3 center);

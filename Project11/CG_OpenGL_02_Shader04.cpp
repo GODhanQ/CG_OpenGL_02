@@ -14,9 +14,6 @@ GLuint VAO, VBO, EBO;
 
 std::vector<Spiral> active_spirals;
 
-// 함수 프로토타입 선언
-void CreateSpiralAt(glm::vec3 center);
-
 int main(int argc, char** argv)
 {
 	glutInit(&argc, argv);
@@ -29,9 +26,8 @@ int main(int argc, char** argv)
 	glewInit();
 	std::cout << "glew initialized\n";
 
-	// Primitive Restart 기능 활성화
 	glEnable(GL_PRIMITIVE_RESTART);
-	glPrimitiveRestartIndex((GLuint)-1); // 재시작 인덱스 설정
+	glPrimitiveRestartIndex((GLuint)-1);
 
 	make_vertexShaders();
 	make_fragmentShaders();
@@ -52,17 +48,15 @@ int main(int argc, char** argv)
 
 void drawScene() {
 	time_by_sec = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
-	float delta_time = 1.0f / 60.0f; // 프레임 기반 시간 변화량
+	float delta_time = 1.0f / 60.0f;
 
-	// 1. 각 나선 상태 업데이트
 	for (auto& spiral : active_spirals) {
-		// 1.1. 새 정점 생성
 		if (!spiral.generation_complete) {
 			spiral.vertices.push_back({
 				spiral.center,
 				spiral.color,
-				0.0f, // state: 확장
-				0.0f, 0.0f, // expand_angle, expand_radius
+				0.0f,
+				0.0f, 0.0f,
 				{}, {}, 0.0f, 0.0f // stop_position, shrink_center, shrink_progress, shrink_initial_radius
 				});
 			if (!spiral.vertices.empty() && spiral.vertices.front().state > 0.5f) {
@@ -70,34 +64,28 @@ void drawScene() {
 			}
 		}
 
-		// 1.2. 기존 모든 정점의 상태 업데이트
 		for (auto& vertex : spiral.vertices) {
-			if (vertex.state < 0.5f) { // 확장 상태 (state == 0.0)
+			if (vertex.state < 0.5f) {
 				if (vertex.expand_angle >= Max_Angle) {
-					// 수축 상태로 전환
 					vertex.state = 1.0f;
 
-					// 1. 멈춘 위치 계산
 					float final_radius = vertex.expand_radius;
 					float final_angle_rad = glm::radians(vertex.expand_angle);
 					glm::vec3 offset = { cos(final_angle_rad) * final_radius, sin(final_angle_rad) * final_radius, 0.0f };
 					vertex.stop_position = vertex.initial_center + offset;
 
-					// 2. 새로운 수축 중심 계산
 					float distance_a = glm::length(vertex.stop_position - vertex.initial_center);
 					vertex.shrink_center = vertex.stop_position + glm::vec3(distance_a, 0.0f, 0.0f);
 
-					// 3. 수축 애니메이션 초기화
 					vertex.shrink_initial_radius = vertex.expand_radius;
 					vertex.shrink_progress = 0.0f;
 				}
 				else {
-					// 확장
 					vertex.expand_angle += rotate_speed * delta_time;
 					vertex.expand_radius += Radius_change_Speed;
 				}
 			}
-			else { // 수축 상태 (state == 1.0)
+			else {
 				if (vertex.shrink_progress < 1.0f) {
 					float shrink_speed_multiplier = rotate_speed / (360.0f * (float)Rotation_Num);
 					vertex.shrink_progress += delta_time * shrink_speed_multiplier;
@@ -105,7 +93,6 @@ void drawScene() {
 			}
 		}
 
-		// 1.3. 수축이 완료된 정점 제거
 		auto& vertices = spiral.vertices;
 		vertices.erase(
 			std::remove_if(vertices.begin(), vertices.end(), [](const Vertex_glm& v) {
@@ -124,45 +111,36 @@ void drawScene() {
 	);
 
 
-	// 3. 렌더링을 위해 모든 정점 및 인덱스 취합
 	std::vector<Vertex_glm> all_vertices;
 	std::vector<unsigned int> all_indices;
 	unsigned int base_vertex_index = 0;
 
 	for (const auto& spiral : active_spirals) {
 		if (spiral.vertices.empty()) continue;
-
-		// 현재 나선의 정점들을 전체 목록에 추가
 		all_vertices.insert(all_vertices.end(), spiral.vertices.begin(), spiral.vertices.end());
 
-		// 현재 나선에 대한 인덱스 생성
 		for (size_t i = 0; i < spiral.vertices.size(); ++i) {
 			all_indices.push_back(base_vertex_index + i);
 		}
 
-		// Primitive Restart 인덱스 추가 (나선 사이에)
 		all_indices.push_back((GLuint)-1);
 
-		// 다음 나선을 위한 기본 인덱스 업데이트
 		base_vertex_index += spiral.vertices.size();
 	}
 
 
-	// 4. 버퍼 업데이트 및 렌더링
 	UPDATE_BUFFER(all_vertices, all_indices);
 
-	// 전역 변수를 사용하여 배경색 설정
 	glClearColor(bgColorR, bgColorG, bgColorB, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glUseProgram(shaderProgramID);
 	glBindVertexArray(VAO);
 
-	// Uniform 변수 업데이트
 	glUniform1f(glGetUniformLocation(shaderProgramID, "u_rotation_num"), (float)Rotation_Num);
 
 	glPointSize(5.0f);
-	glLineWidth(2.0f); // 선 굵기 설정
+	glLineWidth(2.0f);
 	glDrawElements(drawing_type, all_indices.size(), GL_UNSIGNED_INT, 0);
 
 	glBindVertexArray(0);
@@ -197,7 +175,6 @@ void KeyBoard(unsigned char key, int x, int y) {
 
 	if (num_to_create > 0) {
 		for (int i = 0; i < num_to_create; ++i) {
-			// 랜덤 위치 생성 (-1.0 ~ 1.0)
 			glm::vec3 random_pos = { urd_m1_1(dre), urd_m1_1(dre), 0.0f };
 			CreateSpiralAt(random_pos);
 		}
@@ -210,15 +187,12 @@ void MouseClick(int button, int state, int x, int y) {
 	}
 }
 
-// 나선 생성 로직을 별도 함수로 분리
 void CreateSpiralAt(glm::vec3 center) {
-	// 나선 개수 5개로 제한
 	if (active_spirals.size() >= 5) {
 		return;
 	}
 
-	// 배경색 변경
-	bgColorR = urd_0_1(dre) * 0.5f; // 너무 밝지 않게 0.5 곱함
+	bgColorR = urd_0_1(dre) * 0.5f;
 	bgColorG = urd_0_1(dre) * 0.5f;
 	bgColorB = urd_0_1(dre) * 0.5f;
 
@@ -296,7 +270,6 @@ void UPDATE_BUFFER(const std::vector<Vertex_glm>& all_vertices, const std::vecto
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-// ... (filetobuf, make_vertexShaders, make_fragmentShaders, make_shaderProgram 함수는 동일)
 char* filetobuf(const char* file)
 {
 	FILE* fptr;

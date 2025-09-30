@@ -1,4 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
+ #define _CRT_SECURE_NO_WARNINGS
 #include "VarANDFunc_02_Shader03.h"
 
 auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
