@@ -9,6 +9,7 @@ layout (location = 5) in vec3 stop_position;
 layout (location = 6) in vec3 shrink_center;
 layout (location = 7) in float shrink_progress;
 layout (location = 8) in float shrink_initial_radius;
+layout (location = 9) in float which_direction; // 1.0 for clockwise, -1.0 for counter-clockwise
 
 uniform float u_rotation_num;
 
@@ -22,11 +23,11 @@ void main()
 
     if (state < 0.5) {
         float final_radius = expand_radius;
-        float current_angle_rad = radians(expand_angle);
+        float current_angle_rad = which_direction * radians(expand_angle);
         vec3 offset = vec3(cos(current_angle_rad) * final_radius, sin(current_angle_rad) * final_radius, 0.0);
         final_position = initial_center + offset;
     } else {
-        float shrink_angle = 180.0 - (shrink_progress * 360.0 * u_rotation_num);
+        float shrink_angle = which_direction * (180.0 - (shrink_progress * 360.0 * u_rotation_num));
         float shrink_radius = (1.0 - shrink_progress) * shrink_initial_radius;
         
         vec3 shrink_offset = vec3(cos(radians(shrink_angle)) * shrink_radius, sin(radians(shrink_angle)) * shrink_radius, 0.0);

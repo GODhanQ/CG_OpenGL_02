@@ -30,6 +30,7 @@ struct Vertex_glm {
     glm::vec3 shrink_center;
     float shrink_progress;
     float shrink_initial_radius;
+	float which_direction; // 0: clockwise, 1: counterclockwise
 };
 
 struct Spiral {
@@ -37,6 +38,7 @@ struct Spiral {
     glm::vec3 color;
     bool generation_complete;
     std::vector<Vertex_glm> vertices;
+	float which_direction; // 0: clockwise, 1: counterclockwise
 };
 
 extern GLint Window_width, Window_height;

@@ -5,7 +5,7 @@ auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count()
 std::default_random_engine dre(seed);
 std::uniform_real_distribution<float> urd_0_1(0.0f, 1.0f);
 std::uniform_real_distribution<float> urd_m1_1(-1.0f, 1.0f);
-
+std::uniform_real_distribution<float> urd_0_5(0.0f, 5.0f);
 GLuint shaderProgramID;
 GLuint vertexShader;
 GLuint fragmentShader;
@@ -51,14 +51,15 @@ void drawScene() {
 	float delta_time = 1.0f / 60.0f;
 
 	for (auto& spiral : active_spirals) {
+		float direction = spiral.which_direction; // 1.0: clockwise, -1.0: counterclockwise
 		if (!spiral.generation_complete) {
 			spiral.vertices.push_back({
 				spiral.center,
 				spiral.color,
 				0.0f,
 				0.0f, 0.0f,
-				{}, {}, 0.0f, 0.0f // stop_position, shrink_center, shrink_progress, shrink_initial_radius
-				});
+				{}, {}, 0.0f, 0.0f, // stop_position, shrink_center, shrink_progress, shrink_initial_radius
+				direction }); // which_direction
 			if (!spiral.vertices.empty() && spiral.vertices.front().state > 0.5f) {
 				spiral.generation_complete = true;
 			}
@@ -147,7 +148,6 @@ void drawScene() {
 
 	glutSwapBuffers();
 }
-
 GLvoid Reshape(int w, int h) {
 	glViewport(0, 0, w, h);
 }
@@ -197,6 +197,7 @@ void CreateSpiralAt(glm::vec3 center) {
 	bgColorB = urd_0_1(dre) * 0.5f;
 
 	Spiral new_spiral;
+	new_spiral.which_direction = (urd_0_5(dre) < 2.5f) ? 1.0f : -1.0f;
 	new_spiral.center = center;
 	new_spiral.color = { urd_0_1(dre), urd_0_1(dre), urd_0_1(dre) };
 	new_spiral.generation_complete = false;
@@ -242,6 +243,8 @@ void INIT_BUFFER()
 	glEnableVertexAttribArray(7);
 	glVertexAttribPointer(8, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, shrink_initial_radius));
 	glEnableVertexAttribArray(8);
+	glVertexAttribPointer(9, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex_glm), (void*)offsetof(Vertex_glm, which_direction));
+	glEnableVertexAttribArray(9);
 
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
