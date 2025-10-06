@@ -47,7 +47,6 @@ int main(int argc, char** argv)
 }
 
 void drawScene() {
-	time_by_sec = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 	float delta_time = 1.0f / 60.0f;
 
 	for (auto& spiral : active_spirals) {
@@ -147,9 +146,15 @@ void drawScene() {
 	glBindVertexArray(0);
 
 	glutSwapBuffers();
+	//Sleep(10);
 }
 GLvoid Reshape(int w, int h) {
 	glViewport(0, 0, w, h);
+}
+
+void TimerFunc(int value) {
+	drawScene();
+	glutTimerFunc(16, TimerFunc, 0); // 약 16ms마다 호출 (1000ms / 60 ≈ 16.67ms)
 }
 
 void KeyBoard(unsigned char key, int x, int y) {
@@ -217,6 +222,7 @@ std::pair<float, float> ConvertScreenToOpenGL(int screen_x, int screen_y) {
 
 void INIT_BUFFER()
 {
+	start_time = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	std::cout << "Initializing VAO, EBO \n";
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);

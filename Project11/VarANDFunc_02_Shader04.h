@@ -46,7 +46,6 @@ extern GLint Window_width, Window_height;
 extern int Rotation_Num, Spin_Speed;
 extern float Radius_change_Speed;
 extern float Max_Angle;
-extern float time_by_sec;
 extern float rotate_speed;
 
 extern GLfloat bgColorR, bgColorG, bgColorB;
@@ -56,6 +55,7 @@ extern GLenum drawing_type;
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 
+void TimerFunc(int value);
 void KeyBoard(unsigned char key, int x, int y);
 void MouseClick(int button, int state, int x, int y);
 std::pair<float, float> ConvertScreenToOpenGL(int screen_x, int screen_y);
