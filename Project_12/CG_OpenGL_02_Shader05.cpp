@@ -64,9 +64,13 @@ GLvoid drawScene() {
 
 	glUseProgram(shaderProgramID);
 
-	// drawing axis
-	glBindVertexArray(axis_VAO);
-	glDrawElements(GL_LINES, axis_indices.size(), GL_UNSIGNED_INT, 0);
+	// drawing axis : only all_drawing mode
+	if (is_all_drawing) {
+		glBindVertexArray(axis_VAO);
+
+		glLineWidth(2.0f);
+		glDrawElements(GL_LINES, axis_indices.size(), GL_UNSIGNED_INT, 0);
+	}
 
 	// drawing entities
 	glBindVertexArray(VAO);
