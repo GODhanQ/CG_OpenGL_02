@@ -222,7 +222,6 @@ std::pair<float, float> ConvertScreenToOpenGL(int screen_x, int screen_y) {
 
 void INIT_BUFFER()
 {
-	start_time = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	std::cout << "Initializing VAO, EBO \n";
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
