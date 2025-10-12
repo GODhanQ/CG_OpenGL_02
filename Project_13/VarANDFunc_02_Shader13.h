@@ -23,6 +23,7 @@ namespace ShapeAngles {
 	const float TRIANGLE_ANGLES[] = { 90.0f, 210.0f, 330.0f, 330.0f, 330.0f, 90.0f };
 	const float QUAD_ANGLES[] = { 45.0f, 135.0f, 225.0f, 315.0f, 315.0f, 45.0f };
 	const float PENTAGON_ANGLES[] = { 18.0f, 90.0f, 162.0f, 234.0f, 306.0f, 18.0f };
+	const float HITBOX_ANGLES[] = { 135.0f, 315.0f };
 }
 
 struct Vertex_glm {
@@ -33,7 +34,9 @@ struct Vertex_glm {
 struct Shape {
 	std::vector<Vertex_glm> vertices;
 	std::vector<unsigned int> indices;
+	std::pair<glm::vec3, glm::vec3> hit_box;
 	glm::vec3 center;
+	glm::vec3 movment_vector;
 	GLuint draw_mode;
 };
 struct ShapeData {
@@ -53,14 +56,18 @@ struct ShapeManager {
 
 extern GLint Window_width, Window_height;
 
-extern float shape_range;
-extern int selected_shape_index;
+extern float shape_range, moving_speed;
+extern int selected_shape_index, drag_dropped_shape_index;
+extern int CreateShapeNum;
+
+extern bool TransformSwitch;
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 
 void KeyBoard(unsigned char key, int x, int y);
 void MouseClick(int button, int state, int x, int y);
+void MouseMotion(int x, int y);
 std::pair<float, float> ConvertScreenToOpenGL(int screen_x, int screen_y);
 
 void INIT_BUFFER();
@@ -70,4 +77,7 @@ char* filetobuf(const char* file);
 GLuint make_shaderProgram(const char* vertPath, const char* fragPath);
 
 void SetupGeometry();
+void SetupGeometry(glm::vec3 origin, int shape_type);
 int PickObject(int x, int y);
+void MergeShapes(int src_shape_index, int dst_shape_index);
+void Transform();

@@ -17,8 +17,6 @@ GLuint VAO, VBO, IBO;
 //GLuint colorTexture, pickingTexture;
 //GLuint depthRenderbuffer;
 
-
-
 ShapeManager shape_manager;
 
 int main(int argc, char** argv) {
@@ -40,7 +38,7 @@ int main(int argc, char** argv) {
 	shaderProgramID = make_shaderProgram("Vertex_Shader.glsl", "Fragment_Shader.glsl");
 	if (shaderProgramID == 0) {
 		std::cerr << "Shader Program creation failed. Exiting." << std::endl;
-		return 1; // 셰이더 생성 실패 시 종료
+		return 1;
 	}
 	std::cout << "Make Shader Program Completed\n";
 
@@ -51,6 +49,7 @@ int main(int argc, char** argv) {
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(KeyBoard);
 	glutMouseFunc(MouseClick);
+	glutMotionFunc(MouseMotion);
 	glutIdleFunc(drawScene);
 
 	glutMainLoop();
@@ -62,19 +61,20 @@ GLvoid drawScene() {
 
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST); // 깊이 테스트 활성화
+	glEnable(GL_DEPTH_TEST);
+
+	if (TransformSwitch) Transform();
 
 	glUseProgram(shaderProgramID);
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 
-	// --- 상태 초기화 ---
 	GLint isPickingLoc = glGetUniformLocation(shaderProgramID, "u_IsPicking");
 	GLint isOutlineLoc = glGetUniformLocation(shaderProgramID, "u_IsOutline");
 	glUniform1i(isPickingLoc, GL_FALSE);
 	glUniform1i(isOutlineLoc, GL_FALSE);
 
-	// 1. 모든 도형을 채워서 그리기
+	glLineWidth(5.0f);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	GLint base_vertex_offset = 0;
 	size_t index_offset = 0;
@@ -85,7 +85,6 @@ GLvoid drawScene() {
 		index_offset += s.indices.size();
 	}
 
-	// 2. 선택된 도형이 있다면, 그 위에 외곽선을 덧그리기
 	if (selected_shape_index != -1) {
 		auto& s = shape_manager.all_shapes[selected_shape_index];
 
@@ -101,7 +100,7 @@ GLvoid drawScene() {
 		glEnable(GL_POLYGON_OFFSET_LINE);
 		glPolygonOffset(-1.0f, -1.0f);
 
-		glUniform1i(isOutlineLoc, GL_TRUE); // 외곽선 모드 활성화
+		glUniform1i(isOutlineLoc, GL_TRUE);
 
 		glDrawElementsBaseVertex(s.draw_mode, s.indices.size(), GL_UNSIGNED_INT, (void*)(index_offset * sizeof(GLuint)), base_vertex_offset);
 
@@ -124,9 +123,16 @@ void KeyBoard(unsigned char key, int x, int y) {
 	case 'c':
 		shape_manager.clear();
 		selected_shape_index = -1;
-		for (int i = 0; i < 10; ++i) {
+		for (int i = 0; i < CreateShapeNum; ++i) {
 			SetupGeometry();
 		}
+
+		std::cout << "Reset all shapes\n";
+		break;
+	case 's':
+		TransformSwitch = !TransformSwitch;
+
+		std::cout << "TransformSwitch : " << (TransformSwitch ? "On\n" : "Off\n");
 		break;
 	case 'q':
 		exit(0);
@@ -136,11 +142,67 @@ void MouseClick(int button, int state, int x, int y) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
 		selected_shape_index = PickObject(x, y);
 		if (selected_shape_index != -1) {
+			Shape& shape = shape_manager.all_shapes[selected_shape_index];
+			shape.movment_vector = { 0.0f, 0.0f, 0.0f };
+
 			std::cout << "Picked object index: " << selected_shape_index << std::endl;
 		}
 		else {
 			std::cout << "No object picked." << std::endl;
 		}
+	}
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
+		drag_dropped_shape_index = -1;
+		if (selected_shape_index != -1) {
+			for (int i = shape_manager.all_shapes.size() - 1; i >= 0; --i) {
+				if (i == selected_shape_index) continue;
+				std::cout << "Current shape index : " << i << std::endl;
+
+				auto& shape = shape_manager.all_shapes[i];
+				float ogl_x, ogl_y;
+				std::tie(ogl_x, ogl_y) = ConvertScreenToOpenGL(x, y);
+				std::cout << "current ogl x, y: " << ogl_x << ", " << ogl_y << std::endl;
+				
+				std::cout << "hit_box first: " << shape.hit_box.first.x << ", " << shape.hit_box.first.y << std::endl;
+				std::cout << "hit_box second: " << shape.hit_box.second.x << ", " << shape.hit_box.second.y << std::endl << std::endl;
+
+				if (shape.hit_box.first.x <= ogl_x && ogl_x <= shape.hit_box.second.x &&
+					shape.hit_box.second.y <= ogl_y && ogl_y <= shape.hit_box.first.y) {
+					drag_dropped_shape_index = i;
+					/*std::cout << "\nhit_box first: " << shape.hit_box.first.x << ", " << shape.hit_box.first.y << std::endl;
+					std::cout << "hit_box second: " << shape.hit_box.second.x << ", " << shape.hit_box.second.y << std::endl;*/
+					std::cout << "drag & drop possible on index: " << drag_dropped_shape_index << std::endl;
+					break;
+				}
+			}
+
+			if (drag_dropped_shape_index != -1) {
+				std::cout << "Drag & Dropped object index: " << drag_dropped_shape_index << std::endl;
+				MergeShapes(selected_shape_index, drag_dropped_shape_index);
+				selected_shape_index = -1; drag_dropped_shape_index = -1;
+			}
+		}
+	}
+
+	glutPostRedisplay();
+}
+void MouseMotion(int x, int y) {
+	if (selected_shape_index != -1) {
+		float ogl_x, ogl_y;
+		std::tie(ogl_x, ogl_y) = ConvertScreenToOpenGL(x, y);
+
+		auto& shape = shape_manager.all_shapes[selected_shape_index];
+		float mousePoint2Origin_x = ogl_x - shape.center.x;
+		float mousePoint2Origin_y = ogl_y - shape.center.y;
+
+		shape.center.x = ogl_x; shape.center.y = ogl_y;
+		for (auto& v : shape.vertices) {
+			v.position.x += mousePoint2Origin_x;
+			v.position.y += mousePoint2Origin_y;
+		}
+		shape.hit_box.first.x += mousePoint2Origin_x; shape.hit_box.first.y += mousePoint2Origin_y;
+		shape.hit_box.second.x += mousePoint2Origin_x; shape.hit_box.second.y += mousePoint2Origin_y;
+
 		glutPostRedisplay();
 	}
 }
@@ -170,7 +232,7 @@ void INIT_BUFFER() {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 
 	shape_manager.clear();
-	for (int i = 0; i < 10; ++i) {
+	for (int i = 0; i < CreateShapeNum; ++i) {
 		SetupGeometry();
 	}
 }
@@ -264,6 +326,7 @@ void SetupGeometry() {
 
 	shape.draw_mode = (shape_type == 0) ? GL_LINES : GL_TRIANGLE_FAN;
 	shape.center = origin;
+	shape.movment_vector = { 0.0f, 0.0f, 0.0f };
 
 	int num_vertices = shape_type + 2;
 
@@ -277,6 +340,62 @@ void SetupGeometry() {
 		shape.vertices.push_back({ position, color });
 		shape.indices.push_back(i);
 	}
+
+	float hitbox_angle_rad_0 = glm::radians(ShapeAngles::HITBOX_ANGLES[0]);
+	float hitbox_angle_rad_1 = glm::radians(ShapeAngles::HITBOX_ANGLES[1]);
+	shape.hit_box.first = {
+		origin.x + shape_range * cosf(hitbox_angle_rad_0),
+		origin.y + shape_range * sinf(hitbox_angle_rad_0),
+		0.0f
+	};
+	shape.hit_box.second = {
+		origin.x + shape_range * cosf(hitbox_angle_rad_1),
+		origin.y + shape_range * sinf(hitbox_angle_rad_1),
+		0.0f
+	};
+
+	shape_manager.all_shapes.push_back(shape);
+}
+void SetupGeometry(glm::vec3 origin, int shape_type) {
+	glm::vec3 color{ urd_0_1(dre), urd_0_1(dre), urd_0_1(dre) };
+	const float* angles = nullptr;
+	Shape shape;
+
+	if (shape_type == 0) angles = ShapeAngles::LINE_ANGLES;
+	else if (shape_type == 1) angles = ShapeAngles::TRIANGLE_ANGLES;
+	else if (shape_type == 2) angles = ShapeAngles::QUAD_ANGLES;
+	else if (shape_type == 3) angles = ShapeAngles::PENTAGON_ANGLES;
+
+	shape.draw_mode = (shape_type == 0) ? GL_LINES : GL_TRIANGLE_FAN;
+	shape.center = origin;
+	glm::vec3 temp_vector = { urd_m1_1(dre), urd_m1_1(dre), 0.0f};
+	shape.movment_vector = glm::normalize(temp_vector) * moving_speed;
+
+	int num_vertices = shape_type + 2;
+	for (int i = 0; i < num_vertices; ++i) {
+		float angle_rad = glm::radians(angles[i]);
+		glm::vec3 position = {
+			origin.x + shape_range * cosf(angle_rad),
+			origin.y + shape_range * sinf(angle_rad),
+			0.0f
+		};
+
+		shape.vertices.push_back({ position, color });
+		shape.indices.push_back(i);
+	}
+
+	float hitbox_angle_rad_0 = glm::radians(ShapeAngles::HITBOX_ANGLES[0]);
+	float hitbox_angle_rad_1 = glm::radians(ShapeAngles::HITBOX_ANGLES[1]);
+	shape.hit_box.first = {
+		origin.x + shape_range * cosf(hitbox_angle_rad_0),
+		origin.y + shape_range * sinf(hitbox_angle_rad_0),
+		0.0f
+	};
+	shape.hit_box.second = {
+		origin.x + shape_range * cosf(hitbox_angle_rad_1),
+		origin.y + shape_range * sinf(hitbox_angle_rad_1),
+		0.0f
+	};
 
 	shape_manager.all_shapes.push_back(shape);
 }
@@ -327,4 +446,45 @@ int PickObject(int x, int y) {
 		return -1;
 	}
 	return pickedID - 1;
+}
+void MergeShapes(int src_shape_index, int dst_shape_index) {
+	glm::vec3 first_shape_center = shape_manager.all_shapes[src_shape_index].center;
+	glm::vec3 second_shape_center = shape_manager.all_shapes[dst_shape_index].center;
+
+	// 0 : line, 1 : triangle, 2 : square, 3 : pentagon
+	int new_shape_type = ((shape_manager.all_shapes[src_shape_index].vertices.size() - 1)
+		+ (shape_manager.all_shapes[dst_shape_index].vertices.size() - 1)) % 4;	
+	glm::vec3 new_shape_origin = (first_shape_center + second_shape_center) / 2.0f;
+
+	// remove only two old shapes
+	if (src_shape_index > dst_shape_index) {
+		shape_manager.all_shapes.erase(shape_manager.all_shapes.begin() + src_shape_index);
+		shape_manager.all_shapes.erase(shape_manager.all_shapes.begin() + dst_shape_index);
+	}
+	else {
+		shape_manager.all_shapes.erase(shape_manager.all_shapes.begin() + dst_shape_index);
+		shape_manager.all_shapes.erase(shape_manager.all_shapes.begin() + src_shape_index);
+	}
+
+	SetupGeometry(new_shape_origin, new_shape_type);
+}
+void Transform() {
+	for (auto& shape : shape_manager.all_shapes) {
+		shape.center += shape.movment_vector;
+		
+		if (shape.center.x > 1.0f || shape.center.x < -1.0f) {
+			shape.movment_vector.x = -shape.movment_vector.x;
+			shape.center.x = (shape.center.x > 1.0f) ? 1.0f : -1.0f;
+		}
+		if (shape.center.y > 1.0f || shape.center.y < -1.0f) {
+			shape.movment_vector.y = -shape.movment_vector.y;
+			shape.center.y = (shape.center.y > 1.0f) ? 1.0f : -1.0f;
+		}
+		for (auto& v : shape.vertices) {
+			v.position += shape.movment_vector;
+		}
+
+		shape.hit_box.first += shape.movment_vector;
+		shape.hit_box.second += shape.movment_vector;
+	}
 }

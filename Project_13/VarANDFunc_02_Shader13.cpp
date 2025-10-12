@@ -2,9 +2,12 @@
 
 GLint Window_width{ 700 }, Window_height{ 700 };
 
-float shape_range{ 0.2f };
+float shape_range{ 0.2f }, moving_speed{ 0.0005f };
 
-int selected_shape_index = -1; // 선택된 도형 인덱스 (-1은 선택 없음)
+int selected_shape_index{ -1 }, drag_dropped_shape_index{ -1 };
+int CreateShapeNum{ 10 };
+
+bool TransformSwitch{ true };
 
 void ShapeManager::PrepareShapeData() {
     shape_data.all_vertices.clear();
