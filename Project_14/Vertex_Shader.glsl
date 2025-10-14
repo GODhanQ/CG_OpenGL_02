@@ -6,7 +6,7 @@ layout (location = 1) in vec3 in_Color;
 uniform vec3 rotation_axis;
 uniform float rotation_angle;
 uniform float scale_factor;
-uniform vec3 triangle_center; // 삼각형의 중심점
+uniform vec3 triangle_center;
 
 out vec3 out_Color;
 

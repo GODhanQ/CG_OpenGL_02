@@ -17,7 +17,7 @@ bool do_second_process{ false };
 
 GLuint shared_ibo_line_id[2]{ 1, 2 }, shared_ibo_fan_id[7]{ 0, 1, 2, 3, 4, 5, 6 };
 float radius_for_all{ 0.4f }, radius_for_one{ 0.7f };
-float moving_speed_for_all{ 0.0001f }, moving_speed_for_one{ 0.0001f };
+float moving_speed_for_all{ 0.005f }, moving_speed_for_one{ 0.005f };
 
 void ShapeManager::PrepareShapeData() {
 	shape_data.positions.clear();

@@ -4,7 +4,8 @@ GLint Window_width{ 700 }, Window_height{ 700 };
 
 bool transforming{ false }, is_scaling_animation_active{ false }, is_shrinking{ false };
 int current_animating_triangle{ 0 };		// 0 ~ 3
-float delta_angle{ 0.005f }, sum_angle{ 0.0f }, animation_progress{ 0.0f };
+float delta_angle{ 0.5f }, sum_angle{ 0.0f }, animation_progress{ 0.0f };
+float animation_speed{ 0.01f };
 glm::vec3 rotation_axis_value{ 0.0f, 0.0f, 1.0f };
 
 float first_range{ 0.4f }, second_range{ 0.8f };

@@ -83,18 +83,26 @@ GLvoid drawScene() {
 	glBindVertexArray(VAO);
 
 	for (int i = 0; i < 4; ++i) {
-		float current_scale = 1.0f;
-		if (is_scaling_animation_active && i == current_animating_triangle) {
-			current_scale = 1.0f - 0.9f * sin(animation_progress * 3.14159f / 2.0f);
-		}
-		glUniform1f(scale_factor_loc, current_scale);
+		if (transforming) {
+			float current_scale = 1.0f;
+			if (is_scaling_animation_active && i == current_animating_triangle) {
+				current_scale = (1.0f - 0.9f * sin(animation_progress * 3.14159f / 2.0f));
+			}
+			glUniform1f(scale_factor_loc, current_scale);
 
-		// 삼각형의 중심 계산 및 전달
-		unsigned int i1 = all_indices[i * 3 + 0];
-		unsigned int i2 = all_indices[i * 3 + 1];
-		unsigned int i3 = all_indices[i * 3 + 2];
-		glm::vec3 center = (all_vertices[i1].position + all_vertices[i2].position + all_vertices[i3].position) / 3.0f;
-		glUniform3fv(triangle_center_loc, 1, glm::value_ptr(center));
+			// triangle center for correct scaling
+			unsigned int i1 = all_indices[i * 3 + 0];
+			unsigned int i2 = all_indices[i * 3 + 1];
+			unsigned int i3 = all_indices[i * 3 + 2];
+			glm::vec3 center = (all_vertices[i1].position + all_vertices[i2].position + all_vertices[i3].position) / 3.0f;
+			std::cout << "Triangle " << i << " center: (" << center.x << ", " << center.y << ", " << center.z << ")\n";
+			glUniform3fv(triangle_center_loc, 1, glm::value_ptr(center));
+		}
+		else {
+			glUniform1f(scale_factor_loc, 1.0f);
+			glUniform3fv(triangle_center_loc, 1, glm::value_ptr(glm::vec3(0.0f)));
+		}
+
 
 		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * i * 3));
 	}
@@ -339,8 +347,6 @@ void SetupGeometry(float sq_range, float dia_range) {
 }
 void Animate() {
 	if (!is_scaling_animation_active) return;
-
-	float animation_speed = 0.0002f; // 애니메이션 속도
 
 	if (is_shrinking) {
 		animation_progress += animation_speed;

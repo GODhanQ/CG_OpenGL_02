@@ -28,6 +28,7 @@ extern GLint Window_width, Window_height;
 extern bool transforming, is_scaling_animation_active, is_shrinking;
 extern int current_animating_triangle;
 extern float delta_angle, sum_angle, animation_progress;
+extern float animation_speed;
 extern glm::vec3 rotation_axis_value;
 
 extern float first_range, second_range;
